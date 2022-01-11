@@ -1,8 +1,8 @@
-use crate::conversions;
+use crate::{conversions, IcedEventReceivers};
 use bevy::{
     ecs::system::SystemParam,
     input::{keyboard::KeyboardInput, mouse::MouseWheel},
-    prelude::EventReader,
+    prelude::{EventReader, NonSend},
     window::{
         CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter, WindowCreated, WindowFocused,
         WindowResized,
@@ -23,8 +23,9 @@ pub struct InputEvents<'w, 's> {
     window_resized: EventReader<'w, 's, WindowResized>,
 }
 
-pub fn process_input(mut events: InputEvents) {
+pub fn process_input(mut events: InputEvents, receivers: NonSend<IcedEventReceivers>) {
     let mut event_queue: Vec<IcedEvent> = vec![];
+
     for ev in events.cursor.iter() {
         event_queue.push(IcedEvent::Mouse(mouse::Event::CursorMoved {
             position: Point::new(ev.position.x, ev.position.y),
@@ -47,6 +48,12 @@ pub fn process_input(mut events: InputEvents) {
                 }
             };
             event_queue.push(IcedEvent::Keyboard(ev));
+        }
+    }
+
+    for state in receivers.iter() {
+        for ev in &event_queue {
+            state.state.process_event(ev.clone());
         }
     }
 }
