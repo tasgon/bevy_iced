@@ -1,8 +1,8 @@
-use crate::{conversions, IcedEventReceivers};
+use crate::{conversions, UpdateFn};
 use bevy::{
     ecs::system::SystemParam,
     input::{keyboard::KeyboardInput, mouse::MouseWheel},
-    prelude::{EventReader, NonSend},
+    prelude::{EventReader, NonSend, World},
     window::{
         CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter, WindowCreated, WindowFocused,
         WindowResized,
@@ -23,7 +23,7 @@ pub struct InputEvents<'w, 's> {
     window_resized: EventReader<'w, 's, WindowResized>,
 }
 
-pub fn process_input(mut events: InputEvents, receivers: NonSend<IcedEventReceivers>) {
+pub fn process_input(mut events: InputEvents, receivers: NonSend<Vec<UpdateFn>>, mut world: World) {
     let mut event_queue: Vec<IcedEvent> = vec![];
 
     for ev in events.cursor.iter() {
@@ -51,9 +51,9 @@ pub fn process_input(mut events: InputEvents, receivers: NonSend<IcedEventReceiv
         }
     }
 
-    for state in receivers.iter() {
+    for f in receivers.iter() {
         for ev in &event_queue {
-            state.state.process_event(ev.clone());
+            // (f)()
         }
     }
 }

@@ -101,6 +101,8 @@ impl Node for IcedNode {
     ) -> Result<(), bevy::render::render_graph::NodeRunError> {
         let render_device = world.get_resource::<RenderDevice>().unwrap();
 
+        world.archetypes().
+
         // render_context.command_encoder.begin_render_pass(&RenderPassDescriptor {
         //     label: Some("iced pass")
         // })

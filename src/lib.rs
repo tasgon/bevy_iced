@@ -1,7 +1,7 @@
 use std::{cell::RefCell, sync::Arc};
 
 use bevy::{
-    prelude::{App, Plugin},
+    prelude::{App, Plugin, World},
     render::{renderer::RenderDevice, RenderApp, texture::BevyDefault},
 };
 use iced_native::{program, Debug, Program, Size};
@@ -12,34 +12,17 @@ pub type IcedState<T> = Arc<RefCell<program::State<T>>>;
 mod conversions;
 mod render;
 mod systems;
-
-pub struct IcedProgram {
-    pub state: Arc<dyn IcedEventReceiver>,
-    pub(crate) renderer: iced_wgpu::Renderer,
-}
-
-pub trait IcedEventReceiver {
-    fn process_event(&self, ev: iced_native::Event);
-}
-
-impl<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static> IcedEventReceiver
-    for RefCell<program::State<T>>
-{
-    fn process_event(&self, ev: iced_native::Event) {
-        self.borrow_mut().queue_event(ev);
-    }
-}
-
-pub type IcedEventReceivers = Vec<IcedProgram>;
-
 pub struct IcedPlugin;
 
 impl Plugin for IcedPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(systems::process_input);
-        app.insert_non_send_resource(IcedEventReceivers::new());
+        app//.add_system(systems::process_input)
+           .insert_non_send_resource(Vec::<UpdateFn>::new());
     }
 }
+
+type UpdateFn = Box<dyn Fn(&mut World, &iced_native::Event)>;
+type DrawFn = Box<dyn Fn(&mut World)>;
 
 pub trait IcedAppExtensions {
     fn insert_program<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static>(
@@ -69,15 +52,30 @@ impl IcedAppExtensions for App {
             &mut renderer,
             &mut Debug::new(),
         );
-        let res: IcedState<T> = Arc::new(RefCell::new(program));
-        self.world
-            .get_non_send_resource_mut::<IcedEventReceivers>()
-            .unwrap()
-            .push(IcedProgram {
-                state: res.clone(),
-                renderer,
-            });
-        self.insert_non_send_resource(res);
+
+        let update_fn: UpdateFn = Box::new(move |world: &mut World, event: &iced_native::Event| {
+            let mut state = world.get_non_send_resource_mut::<program::State<T>>().unwrap();
+            state.queue_event(event.clone());
+        });
+        self.world.get_non_send_resource_mut::<Vec<UpdateFn>>().unwrap().push(update_fn);
+
+        // let draw_fn: DrawFn = Box::new(move |world: &mut World| {
+        //     let device = world.get_resource::<RenderDevice>().unwrap().wgpu_device();
+        //     renderer.with_primitives(|backend, primitive| {
+        //         backend.present(
+        //             device,
+        //             &mut self.staging_belt,
+        //             &mut encoder,
+        //             &self.dest_view,
+        //             primitive,
+        //             &viewport,
+        //             &[],
+        //         );
+        //     });
+        // });
+        // self.world.get_non_send_resource_mut::<Vec<DrawFn>>().unwrap().push(draw_fn);
+
+        self.insert_non_send_resource(program);
         self
     }
 }
