@@ -1,8 +1,20 @@
+use std::{sync::Arc, cell::RefCell};
+
 use bevy::{
     prelude::FromWorld,
-    render::{renderer::RenderDevice, texture::BevyDefault, render_resource::{RenderPipeline, BindGroupLayout}, render_graph::Node},
+    render::{
+        render_graph::Node,
+        render_resource::{BindGroupLayout, RenderPipeline},
+        renderer::RenderDevice,
+        texture::BevyDefault,
+    },
 };
+use iced_native::futures::executor::LocalPool;
 use iced_wgpu::wgpu;
+
+use crate::DrawFn;
+
+pub const ICED_PASS: &'static str = "iced_pass";
 
 pub struct IcedPipeline {
     pipeline: RenderPipeline,
@@ -83,14 +95,19 @@ impl FromWorld for IcedPipeline {
     }
 }
 
-
 pub struct IcedNode {
+}
 
+impl IcedNode {
+    pub fn new() -> Self {
+        Self {
+        }
+    }
 }
 
 impl Node for IcedNode {
     fn update(&mut self, world: &mut bevy::prelude::World) {
-        // let mut 
+
     }
 
     fn run(
@@ -99,13 +116,13 @@ impl Node for IcedNode {
         render_context: &mut bevy::render::renderer::RenderContext,
         world: &bevy::prelude::World,
     ) -> Result<(), bevy::render::render_graph::NodeRunError> {
-        let render_device = world.get_resource::<RenderDevice>().unwrap();
+        let draw_fns = world.get_non_send_resource::<RefCell<Vec<DrawFn>>>().unwrap();
 
-        // world.archetypes().
+        for f in &mut *draw_fns.borrow_mut() {
+            (f)(world, render_context);
+        }
 
-        // render_context.command_encoder.begin_render_pass(&RenderPassDescriptor {
-        //     label: Some("iced pass")
-        // })
+
 
         Ok(())
     }

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin}};
 use bevy_iced::{IcedAppExtensions, IcedPlugin};
 use iced_native::{
     widget::{button, Button, Row, Text},
@@ -30,12 +30,34 @@ impl Program for MainUi {
 
 pub fn main() {
     let app = App::new()
+        .insert_resource(WindowDescriptor {
+            vsync: false,
+            ..Default::default()
+        })
         .add_plugins(DefaultPlugins)
         .add_plugin(IcedPlugin)
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(LogDiagnosticsPlugin::default())
         .insert_program(MainUi::default())
+        .add_startup_system(build_program)
+        .add_system(tick)
         .run();
 }
 
 fn build_program(mut commands: Commands) {
-    commands;
+    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn_bundle(SpriteBundle {
+        sprite: Sprite {
+            color: Color::rgb(0.25, 0.25, 0.75),
+            custom_size: Some(Vec2::new(50.0, 50.0)),
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+}
+
+pub fn tick(mut sprites: Query<(&mut Sprite,)>, time: Res<Time>) {
+    for (mut s,) in sprites.iter_mut() {
+        s.custom_size = Some(Vec2::new(50.0, 50.0) * time.time_since_startup().as_secs_f32().sin().abs());
+    }
 }

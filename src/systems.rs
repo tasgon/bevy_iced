@@ -53,7 +53,7 @@ pub fn process_input(mut events: InputEvents, receivers: NonSend<Vec<UpdateFn>>,
 
     for f in receivers.iter() {
         for ev in &event_queue {
-            // (f)()
+            (f)(&mut world, &ev);
         }
     }
 }
