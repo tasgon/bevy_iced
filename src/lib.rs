@@ -1,28 +1,22 @@
 use std::marker::PhantomData;
-use std::rc::Rc;
 use std::{cell::RefCell, sync::Arc};
 
 use crate::render::IcedNode;
-use bevy::prelude::NonSendMut;
+use bevy::prelude::{NonSendMut, Res};
 use bevy::render::render_graph::RenderGraph;
+use bevy::window::Windows;
 use bevy::{
     prelude::{App, Plugin, World},
     render::{
-        renderer::{RenderContext, RenderDevice, RenderQueue},
+        renderer::{RenderContext, RenderDevice},
         texture::BevyDefault,
-        view::ExtractedWindows,
         RenderApp,
     },
 };
-use iced_native::futures::executor::LocalPool;
-use iced_native::futures::task::SpawnExt;
-use iced_native::{Event as IcedEvent, Clipboard};
+use iced_native::Event as IcedEvent;
 use iced_native::{program, Debug, Program, Size};
-use iced_wgpu::{
-    wgpu::{self, util::StagingBelt, CommandEncoderDescriptor},
-    Viewport,
-};
-use render::{IcedPipeline, IcedRenderData};
+use iced_wgpu::{wgpu, Viewport};
+use render::IcedRenderData;
 
 pub type IcedState<T> = Arc<RefCell<program::State<T>>>;
 
@@ -33,26 +27,23 @@ pub struct IcedPlugin;
 
 impl Plugin for IcedPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_system(systems::process_input)
+        app.add_system(systems::process_input)
             .insert_resource(Vec::<IcedEvent>::new());
 
         let render_app = app.sub_app_mut(RenderApp);
-        render_app
-            .insert_non_send_resource(RefCell::new(Vec::<DrawFn>::new()))
-            .insert_non_send_resource(Vec::<UpdateFn>::new());
+        render_app.insert_non_send_resource(RefCell::new(Vec::<DrawFn>::new()));
         render_app.init_resource::<render::IcedPipeline>();
         setup_pipeline(&mut render_app.world.get_resource_mut().unwrap());
     }
 }
 
-type UpdateFn = Box<dyn FnMut(&mut World, &Viewport, Option<&iced_native::Event>)>;
+// type UpdateFn = Box<dyn FnMut(&mut World, &Viewport, Option<&iced_native::Event>)>;
 type DrawFn = Box<dyn FnMut(&World, &mut RenderContext, &Viewport, &mut render::IcedRenderData)>;
 
 struct IcedProgramData<T> {
     renderer: iced_wgpu::Renderer,
     debug: iced_native::Debug,
-    _phantom: PhantomData<T>
+    _phantom: PhantomData<T>,
 }
 
 pub trait IcedAppExtensions {
@@ -81,7 +72,7 @@ impl IcedAppExtensions for App {
         let mut clipboard = iced_native::clipboard::Null;
         let program =
             program::State::new(program, viewport.logical_size(), &mut renderer, &mut debug);
-        
+
         let update_data = Arc::new(IcedProgramData::<T> {
             renderer,
             debug,
@@ -90,60 +81,69 @@ impl IcedAppExtensions for App {
         let draw_data = update_data.clone();
         self.insert_non_send_resource(update_data.clone());
 
-        self.add_system(move |mut state: NonSendMut<program::State<T>>, mut data: NonSendMut<Arc<IcedProgramData<T>>>| {
-            // println!("running update system");
-            let IcedProgramData::<T> { renderer, debug, _phantom } = unsafe {
-                get_rc_mut(&mut *data)
-            };
-
-            // if !state.is_queue_empty() {
-                state.update(
-                    viewport.logical_size(),
-                    iced_native::Point { x: 0.0, y: 0.0 },
+        self.add_system(
+            move |mut state: NonSendMut<program::State<T>>,
+                  mut data: NonSendMut<Arc<IcedProgramData<T>>>,
+                  windows: Res<Windows>,
+                  events: Res<Vec<IcedEvent>>| {
+                let IcedProgramData::<T> {
                     renderer,
-                    &mut clipboard,
                     debug,
-                );
-            // }
-        });
-        
-        let update_fn: UpdateFn = Box::new(move |world: &mut World, viewport: &Viewport, event: Option<&iced_native::Event>| {
-            println!("running update");
-            
-            let mut state = world
-                .get_non_send_resource_mut::<program::State<T>>()
-                .unwrap();
-            if let Some(ev) = event {
-                state.queue_event(ev.clone());
-            }
-            
-        });
-        self.sub_app_mut(RenderApp)
-            .world
-            .get_non_send_resource_mut::<Vec<UpdateFn>>()
-            .unwrap()
-            .push(update_fn);
+                    _phantom,
+                } = unsafe { get_rc_mut(&mut *data) };
 
-        let draw_fn: DrawFn = Box::new(move |world: &World, ctx: &mut RenderContext, viewport: &Viewport, data: &mut IcedRenderData| {
-            // println!("running draw");
-            let IcedProgramData::<T> { renderer, debug, _phantom } = unsafe {
-                get_rc_mut(&draw_data)
-            };
+                for ev in &*events {
+                    state.queue_event(ev.clone());
+                }
 
-            let device = ctx.render_device.wgpu_device();
+                if !state.is_queue_empty() {
+                    let window = windows.get_primary().unwrap();
+                    let cursor_position = window.cursor_position().map_or(
+                        iced_native::Point { x: 0.0, y: 0.0 },
+                        |p| iced_native::Point {
+                            x: p.x,
+                            y: window.height() - p.y,
+                        },
+                    );
 
-            renderer.with_primitives(|backend, primitive| {
-                backend.present(
-                    device,
-                    data.staging_belt,
-                    data.encoder,
-                    data.view,
-                    primitive,
-                    &viewport,
-                    &debug.overlay(),
-                );
-            });
-        });
+                    state.update(
+                        viewport.logical_size(),
+                        cursor_position,
+                        renderer,
+                        &mut clipboard,
+                        debug,
+                    );
+                }
+            },
+        );
+
+        let draw_fn: DrawFn = Box::new(
+            move |_world: &World,
+                  ctx: &mut RenderContext,
+                  viewport: &Viewport,
+                  data: &mut IcedRenderData| {
+                // println!("running draw");
+                let IcedProgramData::<T> {
+                    renderer,
+                    debug,
+                    _phantom,
+                } = unsafe { get_rc_mut(&draw_data) };
+
+                let device = ctx.render_device.wgpu_device();
+
+                renderer.with_primitives(|backend, primitive| {
+                    backend.present(
+                        device,
+                        data.staging_belt,
+                        data.encoder,
+                        data.view,
+                        primitive,
+                        &viewport,
+                        &debug.overlay(),
+                    );
+                });
+            },
+        );
 
         self.sub_app_mut(RenderApp)
             .world
@@ -168,7 +168,7 @@ pub fn setup_pipeline(graph: &mut RenderGraph) {
         .unwrap();
 }
 
-pub unsafe fn get_rc_mut<'a, T>(rc: &'a Arc<T>) -> &'a mut T {
+unsafe fn get_rc_mut<'a, T>(rc: &'a Arc<T>) -> &'a mut T {
     let data = &**rc as *const T as *mut T;
     &mut *data
 }

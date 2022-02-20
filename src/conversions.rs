@@ -168,3 +168,13 @@ pub fn key_code(virtual_keycode: BevyKeyCode) -> IcedKeyCode {
         BevyKeyCode::Asterisk => IcedKeyCode::Asterisk,
     }
 }
+
+pub fn mouse_button(button: bevy::input::mouse::MouseButton) -> iced_native::mouse::Button {
+    use iced_native::mouse::Button;
+    match button {
+        bevy::prelude::MouseButton::Left => Button::Left,
+        bevy::prelude::MouseButton::Right => Button::Right,
+        bevy::prelude::MouseButton::Middle => Button::Middle,
+        bevy::prelude::MouseButton::Other(val) => Button::Other(val as u8),
+    }
+}

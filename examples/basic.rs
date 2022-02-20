@@ -32,7 +32,7 @@ impl Program for MainUi {
 }
 
 pub fn main() {
-    let app = App::new()
+    App::new()
         .insert_resource(WindowDescriptor {
             vsync: false,
             ..Default::default()

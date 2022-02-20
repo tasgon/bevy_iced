@@ -1,18 +1,27 @@
-use std::{cell::RefCell, sync::Arc};
+use std::cell::RefCell;
 
 use bevy::{
     prelude::FromWorld,
     render::{
         render_graph::Node,
-        render_resource::{BindGroupLayout, RenderPipeline, Texture, TextureView, Sampler, BindGroup, Buffer},
+        render_resource::{
+            BindGroup, BindGroupLayout, Buffer, RenderPipeline, Sampler, Texture, TextureView,
+        },
         renderer::{RenderDevice, RenderQueue},
-        texture::BevyDefault, view::ExtractedWindows,
-    }, window::WindowDescriptor,
+        texture::BevyDefault,
+        view::ExtractedWindows,
+    },
 };
-use iced_native::{futures::{executor::LocalPool, task::SpawnExt}, Size};
-use iced_wgpu::{wgpu::{self, util::RenderEncoder}, Viewport};
+use iced_native::{
+    futures::{executor::LocalPool, task::SpawnExt},
+    Size,
+};
+use iced_wgpu::{
+    wgpu::{self},
+    Viewport,
+};
 
-use crate::{DrawFn, UpdateFn};
+use crate::DrawFn;
 
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
 
@@ -142,13 +151,18 @@ impl IcedNode {
 
 impl Node for IcedNode {
     fn update(&mut self, world: &mut bevy::prelude::World) {
-        let window = world.get_resource::<ExtractedWindows>().unwrap().values().next().unwrap();
+        let window = world
+            .get_resource::<ExtractedWindows>()
+            .unwrap()
+            .values()
+            .next()
+            .unwrap();
         let size = wgpu::Extent3d {
             width: window.physical_width,
             height: window.physical_height,
             depth_or_array_layers: 1,
         };
-        
+
         if self.size != size || self.texture_data.is_none() {
             let iced_pipeline = world.get_resource::<IcedPipeline>().unwrap();
             let device = world.get_resource::<RenderDevice>().unwrap();
@@ -159,9 +173,10 @@ impl Node for IcedNode {
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
-                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::RENDER_ATTACHMENT,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING
+                    | wgpu::TextureUsages::RENDER_ATTACHMENT,
             });
-    
+
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -175,7 +190,7 @@ impl Node for IcedNode {
                     wgpu::BindGroupEntry {
                         binding: 1,
                         resource: wgpu::BindingResource::Sampler(&iced_pipeline.sampler),
-                    }
+                    },
                 ],
             });
 
@@ -186,7 +201,7 @@ impl Node for IcedNode {
 
     fn run(
         &self,
-        graph: &mut bevy::render::render_graph::RenderGraphContext,
+        _graph: &mut bevy::render::render_graph::RenderGraphContext,
         render_context: &mut bevy::render::renderer::RenderContext,
         world: &bevy::prelude::World,
     ) -> Result<(), bevy::render::render_graph::NodeRunError> {
@@ -197,18 +212,26 @@ impl Node for IcedNode {
             .get_non_send_resource::<RefCell<Vec<DrawFn>>>()
             .unwrap();
 
-        let mut encoder = render_context.render_device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("bevy_iced encoder"),
-        });
+        let mut encoder =
+            render_context
+                .render_device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("bevy_iced encoder"),
+                });
 
-        let extracted_window =
-            &world.get_resource::<ExtractedWindows>().unwrap().windows.values().next().unwrap();
+        let extracted_window = &world
+            .get_resource::<ExtractedWindows>()
+            .unwrap()
+            .windows
+            .values()
+            .next()
+            .unwrap();
         let swap_chain_texture = extracted_window
             .swap_chain_texture
             .as_ref()
             .unwrap()
             .clone();
-        
+
         let mut staging_belt = wgpu::util::StagingBelt::new(5 * 1024);
         let mut pool = LocalPool::new();
 
@@ -242,23 +265,29 @@ impl Node for IcedNode {
         pool.spawner().spawn(staging_belt.recall()).unwrap();
         pool.run_until_stalled();
 
-        let mut pass = render_context.command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("bevy_iced main pass"),
-            color_attachments: &[wgpu::RenderPassColorAttachment {
-                view: &swap_chain_texture,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
-                    store: true,
-                },
-            }],
-            depth_stencil_attachment: None,
-        });
+        let mut pass =
+            render_context
+                .command_encoder
+                .begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("bevy_iced main pass"),
+                    color_attachments: &[wgpu::RenderPassColorAttachment {
+                        view: &swap_chain_texture,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Load,
+                            store: true,
+                        },
+                    }],
+                    depth_stencil_attachment: None,
+                });
 
         pass.set_pipeline(&iced_pipeline.pipeline);
         pass.set_bind_group(0, &bind_group, &[]);
-        pass.set_index_buffer(*iced_pipeline.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        pass.draw_indexed(0..6, 0, 0..1);
+        pass.set_index_buffer(
+            *iced_pipeline.index_buffer.slice(..),
+            wgpu::IndexFormat::Uint16,
+        );
+        pass.draw_indexed(0..NUM_INDICES, 0, 0..1);
 
         Ok(())
     }
