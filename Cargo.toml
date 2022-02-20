@@ -16,3 +16,5 @@ documentation = "https://docs.rs/bevy_iced"
 bevy = "0.6"
 iced_wgpu = { git = "https://github.com/iced-rs/iced.git", branch = "0.4" }
 iced_native = { git = "https://github.com/iced-rs/iced.git", branch = "0.4" }
+
+bytemuck = "1.7"

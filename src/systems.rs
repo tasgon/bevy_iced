@@ -1,4 +1,7 @@
 use crate::{conversions, UpdateFn};
+use bevy::ecs::query::WorldQuery;
+use bevy::prelude::{Query, ResMut};
+use bevy::sprite::Sprite;
 use bevy::{
     ecs::system::SystemParam,
     input::{keyboard::KeyboardInput, mouse::MouseWheel},
@@ -23,8 +26,8 @@ pub struct InputEvents<'w, 's> {
     window_resized: EventReader<'w, 's, WindowResized>,
 }
 
-pub fn process_input(mut events: InputEvents, receivers: NonSend<Vec<UpdateFn>>, mut world: World) {
-    let mut event_queue: Vec<IcedEvent> = vec![];
+pub fn process_input(mut events: InputEvents, mut event_queue: ResMut<Vec<IcedEvent>>) {
+    event_queue.clear();
 
     for ev in events.cursor.iter() {
         event_queue.push(IcedEvent::Mouse(mouse::Event::CursorMoved {
@@ -48,12 +51,6 @@ pub fn process_input(mut events: InputEvents, receivers: NonSend<Vec<UpdateFn>>,
                 }
             };
             event_queue.push(IcedEvent::Keyboard(ev));
-        }
-    }
-
-    for f in receivers.iter() {
-        for ev in &event_queue {
-            (f)(&mut world, &ev);
         }
     }
 }
