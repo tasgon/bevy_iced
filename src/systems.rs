@@ -1,12 +1,10 @@
 use crate::conversions;
-use bevy::ecs::query::WorldQuery;
 use bevy::input::mouse::MouseButtonInput;
-use bevy::prelude::{Query, ResMut};
-use bevy::sprite::Sprite;
+use bevy::prelude::ResMut;
 use bevy::{
     ecs::system::SystemParam,
     input::{keyboard::KeyboardInput, mouse::MouseWheel},
-    prelude::{EventReader, NonSend, World},
+    prelude::EventReader,
     window::{
         CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter, WindowCreated, WindowFocused,
         WindowResized,
@@ -45,6 +43,26 @@ pub fn process_input(mut events: InputEvents, mut event_queue: ResMut<Vec<IcedEv
                 iced_native::mouse::Event::ButtonReleased(button)
             }
         }))
+    }
+
+    for _ev in events.cursor_entered.iter() {
+        event_queue.push(IcedEvent::Mouse(iced_native::mouse::Event::CursorEntered));
+    }
+
+    for _ev in events.cursor_left.iter() {
+        event_queue.push(IcedEvent::Mouse(iced_native::mouse::Event::CursorLeft));
+    }
+
+    for ev in events.mouse_wheel.iter() {
+        event_queue.push(IcedEvent::Mouse(iced_native::mouse::Event::WheelScrolled {
+            delta: mouse::ScrollDelta::Pixels { x: ev.x, y: ev.y },
+        }));
+    }
+
+    for ev in events.received_character.iter() {
+        event_queue.push(IcedEvent::Keyboard(
+            iced_native::keyboard::Event::CharacterReceived(ev.char),
+        ));
     }
 
     for ev in events.keyboard_input.iter() {
