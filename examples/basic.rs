@@ -2,19 +2,20 @@ use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     prelude::*,
 };
+use bevy_iced::iced::{
+    program::State,
+    widget::{button, Button, Row, Text},
+    Element, Program,
+};
 use bevy_iced::{IcedAppExtensions, IcedPlugin};
 use bevy_inspector_egui::WorldInspectorPlugin;
-use bevy_iced::iced::{
-    widget::{button, Button, Row, Text},
-    Element, Program, program::State,
-};
 
 use rand::random as rng;
 
 #[derive(Debug, Clone)]
 pub enum UiMessage {
     BoxRequested,
-    BoxAdded
+    BoxAdded,
 }
 
 #[derive(Default)]
@@ -34,14 +35,17 @@ impl Program for MainUi {
             UiMessage::BoxAdded => {
                 self.box_requested = false;
                 self.count += 1;
-            },
+            }
         }
         iced_native::Command::none()
     }
 
     fn view(&mut self) -> Element<'_, Self::Message, Self::Renderer> {
         Row::new()
-            .push(Button::new(&mut self.btn, Text::new("Request box")).on_press(UiMessage::BoxRequested))
+            .push(
+                Button::new(&mut self.btn, Text::new("Request box"))
+                    .on_press(UiMessage::BoxRequested),
+            )
             .push(Text::new(format!("{} boxes", self.count)))
             .into()
     }

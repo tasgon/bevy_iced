@@ -5,10 +5,7 @@ use bevy::{
     ecs::system::SystemParam,
     input::{keyboard::KeyboardInput, mouse::MouseWheel},
     prelude::EventReader,
-    window::{
-        CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter, WindowCreated, WindowFocused,
-        WindowResized,
-    },
+    window::{CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter},
 };
 use iced_native::{keyboard, mouse, Event as IcedEvent, Point};
 
@@ -21,9 +18,6 @@ pub struct InputEvents<'w, 's> {
     mouse_wheel: EventReader<'w, 's, MouseWheel>,
     received_character: EventReader<'w, 's, ReceivedCharacter>,
     keyboard_input: EventReader<'w, 's, KeyboardInput>,
-    window_focused: EventReader<'w, 's, WindowFocused>,
-    window_created: EventReader<'w, 's, WindowCreated>,
-    window_resized: EventReader<'w, 's, WindowResized>,
 }
 
 pub fn process_input(mut events: InputEvents, mut event_queue: ResMut<Vec<IcedEvent>>) {

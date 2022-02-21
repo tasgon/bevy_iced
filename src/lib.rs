@@ -6,12 +6,12 @@
 //!     IcedAppExtensions, IcedPlugin,
 //!     iced::{Program, program::State}
 //! };
-//! 
+//!
 //! #[derive(Default)]
 //! pub struct Ui {
 //!     // Set up your UI state
 //! }
-//! 
+//!
 //! impl Program for Ui {
 //!     // Set up your program logic
 //! }
@@ -47,9 +47,9 @@ use bevy::{
     },
 };
 pub use iced_native as iced;
-pub use iced_wgpu;
 use iced_native::Event as IcedEvent;
 use iced_native::{program, Debug, Program, Size};
+pub use iced_wgpu;
 use iced_wgpu::{wgpu, Viewport};
 use render::IcedRenderData;
 
@@ -68,7 +68,7 @@ impl Plugin for IcedPlugin {
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.insert_non_send_resource(RefCell::new(Vec::<DrawFn>::new()));
-        render_app.init_resource::<render::IcedPipeline>();
+        // render_app.init_resource::<render::IcedPipeline>();
         setup_pipeline(&mut render_app.world.get_resource_mut().unwrap());
     }
 }
@@ -173,7 +173,7 @@ impl IcedAppExtensions for App {
                     backend.present(
                         device,
                         data.staging_belt,
-                        data.encoder,
+                        &mut ctx.command_encoder,
                         data.view,
                         primitive,
                         &viewport,
