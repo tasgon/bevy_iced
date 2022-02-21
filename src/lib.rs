@@ -25,7 +25,7 @@
 //!         .run();
 //! }
 //!
-//! pub fn ui_system(mut ui_state: NonSendMut<State<Ui>>, /* ... */) {
+//! pub fn ui_system(mut ui_state: ResMut<State<Ui>>, /* ... */) {
 //!     // Do some work here, then modify your ui state by running
 //!     // ui_state.queue_message(..);
 //! }
