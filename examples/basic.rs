@@ -80,7 +80,7 @@ pub fn tick(mut sprites: Query<(&mut Sprite,)>, time: Res<Time>) {
     }
 }
 
-pub fn box_system(mut commands: Commands, mut program: NonSendMut<State<MainUi>>) {
+pub fn box_system(mut commands: Commands, mut program: ResMut<State<MainUi>>) {
     let pos = (Vec3::new(rng(), rng(), 0.0) - Vec3::new(0.5, 0.5, 0.0)) * 300.0;
     if program.program().box_requested {
         commands.spawn_bundle(SpriteBundle {

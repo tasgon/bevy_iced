@@ -35,7 +35,7 @@ use std::marker::PhantomData;
 use std::{cell::RefCell, sync::Arc};
 
 use crate::render::IcedNode;
-use bevy::prelude::{NonSendMut, Res};
+use bevy::prelude::{NonSendMut, Res, ResMut};
 use bevy::render::render_graph::RenderGraph;
 use bevy::window::Windows;
 use bevy::{
@@ -85,18 +85,27 @@ struct IcedProgramData<T> {
 /// to handle Iced.
 pub trait IcedAppExtensions {
     /// Insert a new [`Program`](`iced::Program`) and make it accessible as a resource.
-    fn insert_program<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static>(
+    fn insert_program<
+        M: Send + Sync,
+        T: Program<Renderer = iced_wgpu::Renderer, Message = M> + Send + Sync + 'static,
+    >(
+        &mut self,
+        program: T,
+    ) -> &mut Self;
+
+    /// Insert a new [`Program`](`iced::Program`) and make it accessible as a `NonSend` resource.
+    fn insert_non_send_program<
+        M,
+        T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static,
+    >(
         &mut self,
         program: T,
     ) -> &mut Self;
 }
 
-impl IcedAppExtensions for App {
-    fn insert_program<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static>(
-        &mut self,
-        program: T,
-    ) -> &mut Self {
-        let device = self
+macro_rules! base_insert_proc {
+    ($app:expr, $program:expr, $state_type:ty) => {{
+        let device = $app
             .sub_app(RenderApp)
             .world
             .get_resource::<RenderDevice>()
@@ -109,7 +118,7 @@ impl IcedAppExtensions for App {
         let mut debug = Debug::new();
         let mut clipboard = iced_native::clipboard::Null;
         let program =
-            program::State::new(program, viewport.logical_size(), &mut renderer, &mut debug);
+            program::State::new($program, viewport.logical_size(), &mut renderer, &mut debug);
 
         let update_data = Arc::new(IcedProgramData::<T> {
             renderer,
@@ -117,10 +126,10 @@ impl IcedAppExtensions for App {
             _phantom: Default::default(),
         });
         let draw_data = update_data.clone();
-        self.insert_non_send_resource(update_data.clone());
+        $app.insert_non_send_resource(update_data.clone());
 
-        self.add_system(
-            move |mut state: NonSendMut<program::State<T>>,
+        $app.add_system(
+            move |mut state: $state_type,
                   mut data: NonSendMut<Arc<IcedProgramData<T>>>,
                   windows: Res<Windows>,
                   events: Res<Vec<IcedEvent>>| {
@@ -160,7 +169,6 @@ impl IcedAppExtensions for App {
                   ctx: &mut RenderContext,
                   viewport: &Viewport,
                   data: &mut IcedRenderData| {
-                // println!("running draw");
                 let IcedProgramData::<T> {
                     renderer,
                     debug,
@@ -183,15 +191,38 @@ impl IcedAppExtensions for App {
             },
         );
 
-        self.sub_app_mut(RenderApp)
+        $app.sub_app_mut(RenderApp)
             .world
             .get_non_send_resource_mut::<RefCell<Vec<DrawFn>>>()
             .unwrap()
             .borrow_mut()
             .push(draw_fn);
 
-        self.insert_non_send_resource(program);
-        self
+        program
+    }};
+}
+
+impl IcedAppExtensions for App {
+    fn insert_program<
+        M: Send + Sync,
+        T: Program<Renderer = iced_wgpu::Renderer, Message = M> + Send + Sync + 'static,
+    >(
+        &mut self,
+        program: T,
+    ) -> &mut Self {
+        let resource = base_insert_proc!(self, program, ResMut<program::State<T>>);
+        self.insert_resource(resource)
+    }
+
+    fn insert_non_send_program<
+        M,
+        T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static,
+    >(
+        &mut self,
+        program: T,
+    ) -> &mut Self {
+        let resource = base_insert_proc!(self, program, NonSendMut<program::State<T>>);
+        self.insert_non_send_resource(resource)
     }
 }
 
