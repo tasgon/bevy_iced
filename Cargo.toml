@@ -18,3 +18,7 @@ iced_wgpu = { git = "https://github.com/iced-rs/iced.git", branch = "0.4" }
 iced_native = { git = "https://github.com/iced-rs/iced.git", branch = "0.4" }
 
 bytemuck = "1.7"
+
+[dev-dependencies]
+rand = "0.8"
+bevy-inspector-egui = "0.8"
