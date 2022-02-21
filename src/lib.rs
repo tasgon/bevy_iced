@@ -1,3 +1,36 @@
+//! # Use iced UI programs in your Bevy application
+//!
+//! ```no_run
+//! use bevy::prelude::*;
+//! use bevy_iced::{
+//!     IcedAppExtensions, IcedPlugin,
+//!     iced::{Program, program::State}
+//! };
+//! 
+//! #[derive(Default)]
+//! pub struct Ui {
+//!     // Set up your UI state
+//! }
+//! 
+//! impl Program for Ui {
+//!     // Set up your program logic
+//! }
+//!
+//! pub fn main() {
+//!     App::new()
+//!         .add_plugins(DefaultPlugins)
+//!         .add_plugin(IcedPlugin)
+//!         .insert_program(Ui::default())
+//!         .add_system(ui_system)
+//!         .run();
+//! }
+//!
+//! pub fn ui_system(mut ui_state: NonSendMut<State<Ui>>, /* ... */) {
+//!     // Do some work here, then modify your ui state by running
+//!     // ui_state.queue_message(..);
+//! }
+//! ```
+
 use std::marker::PhantomData;
 use std::{cell::RefCell, sync::Arc};
 
@@ -13,16 +46,19 @@ use bevy::{
         RenderApp,
     },
 };
+pub use iced_native as iced;
+pub use iced_wgpu;
 use iced_native::Event as IcedEvent;
 use iced_native::{program, Debug, Program, Size};
 use iced_wgpu::{wgpu, Viewport};
 use render::IcedRenderData;
 
-pub type IcedState<T> = Arc<RefCell<program::State<T>>>;
-
 mod conversions;
 mod render;
 mod systems;
+
+/// The main feature of `bevy_iced`.
+/// Add this to your [`App`](`bevy::prelude::App`) by calling `app.add_plugin(bevy_iced::IcedPlugin)`.
 pub struct IcedPlugin;
 
 impl Plugin for IcedPlugin {
@@ -37,7 +73,6 @@ impl Plugin for IcedPlugin {
     }
 }
 
-// type UpdateFn = Box<dyn FnMut(&mut World, &Viewport, Option<&iced_native::Event>)>;
 type DrawFn = Box<dyn FnMut(&World, &mut RenderContext, &Viewport, &mut render::IcedRenderData)>;
 
 struct IcedProgramData<T> {
@@ -46,7 +81,10 @@ struct IcedProgramData<T> {
     _phantom: PhantomData<T>,
 }
 
+/// A trait that adds the necessary features for an [`App`](`bevy::prelude::App`)
+/// to handle Iced.
 pub trait IcedAppExtensions {
+    /// Insert a new [`Program`](`iced::Program`) and make it accessible as a resource.
     fn insert_program<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static>(
         &mut self,
         program: T,
@@ -157,7 +195,7 @@ impl IcedAppExtensions for App {
     }
 }
 
-pub fn setup_pipeline(graph: &mut RenderGraph) {
+pub(crate) fn setup_pipeline(graph: &mut RenderGraph) {
     graph.add_node(render::ICED_PASS, IcedNode::new());
 
     graph

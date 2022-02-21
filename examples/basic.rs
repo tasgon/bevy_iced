@@ -4,9 +4,9 @@ use bevy::{
 };
 use bevy_iced::{IcedAppExtensions, IcedPlugin};
 use bevy_inspector_egui::WorldInspectorPlugin;
-use iced_native::{
+use bevy_iced::iced::{
     widget::{button, Button, Row, Text},
-    Element, Program, program,
+    Element, Program, program::State,
 };
 
 use rand::random as rng;
@@ -25,7 +25,7 @@ pub struct MainUi {
 }
 
 impl Program for MainUi {
-    type Renderer = iced_wgpu::Renderer;
+    type Renderer = bevy_iced::iced_wgpu::Renderer;
     type Message = UiMessage;
 
     fn update(&mut self, msg: UiMessage) -> iced_native::Command<UiMessage> {
@@ -76,7 +76,7 @@ pub fn tick(mut sprites: Query<(&mut Sprite,)>, time: Res<Time>) {
     }
 }
 
-pub fn box_system(mut commands: Commands, mut program: NonSendMut<program::State<MainUi>>) {
+pub fn box_system(mut commands: Commands, mut program: NonSendMut<State<MainUi>>) {
     let pos = (Vec3::new(rng(), rng(), 0.0) - Vec3::new(0.5, 0.5, 0.0)) * 300.0;
     if program.program().box_requested {
         commands.spawn_bundle(SpriteBundle {
