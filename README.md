@@ -33,10 +33,11 @@ pub fn ui_system(mut ui_state: NonSendMut<State<Ui>>, /* ... */) {
 }
 ```
 
-See the [examples](https://github.com/tasgon/bevy_iced/tree/master/examples) folder for more details on how to use the crate.
+See the [examples](https://github.com/tasgon/bevy_iced/tree/master/examples) and the [documentation](https://docs.rs/bevy_iced) for more details on how to use the crate.
 
 ## Todo
 
+- Properly update viewport information
 - Add support for programs that are `Send + Sync` (It's actually pretty simple to support it, but I'd like to do it in a somewhat clean manner)
 - Multi-window support
 - Bind programs to individual stages
