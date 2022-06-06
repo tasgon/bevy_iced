@@ -1,5 +1,8 @@
 # `bevy_iced`: use [Iced](https://github.com/iced-rs/iced) UI programs in your [Bevy](https://github.com/bevyengine/bevy/) application
 
+[![Crates.io](https://img.shields.io/crates/v/bevy_iced.svg)](https://crates.io/crates/bevy_iced)
+[![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](./LICENSE)
+
 ## Example
 
 ```rust
