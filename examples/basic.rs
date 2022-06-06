@@ -3,20 +3,25 @@ use bevy::{
     input::mouse::MouseWheel,
     prelude::*,
 };
-use bevy_iced::iced::{
-    program::State,
-    widget::{button, Button, Row, Text},
-    Element, Program,
+use bevy_iced::{
+    iced::{
+        program::State,
+        widget::{button, Button, Row, Text},
+        Element, Program,
+    },
+    IcedSettings,
 };
 use bevy_iced::{IcedAppExtensions, IcedPlugin};
 use bevy_inspector_egui::WorldInspectorPlugin;
 
+use iced_native::widget::Column;
 use rand::random as rng;
 
 #[derive(Debug, Clone)]
 pub enum UiMessage {
     BoxRequested,
     BoxAdded,
+    Rescaled(f64),
 }
 
 #[derive(Default)]
@@ -24,6 +29,7 @@ pub struct MainUi {
     btn: button::State,
     pub count: u32,
     pub box_requested: bool,
+    pub scale_factor: f64,
 }
 
 impl Program for MainUi {
@@ -37,29 +43,30 @@ impl Program for MainUi {
                 self.box_requested = false;
                 self.count += 1;
             }
+            UiMessage::Rescaled(factor) => {
+                self.scale_factor = factor;
+            }
         }
         iced_native::Command::none()
     }
 
     fn view(&mut self) -> Element<'_, Self::Message, Self::Renderer> {
-        Row::new()
+        let row = Row::new()
             .push(
                 Button::new(&mut self.btn, Text::new("Request box"))
                     .on_press(UiMessage::BoxRequested),
             )
-            .push(Text::new(format!("{} boxes", self.count)))
+            .push(Text::new(format!("{} boxes", self.count)));
+        Column::new()
+            .push(row)
+            .push(Text::new(format!("Scale factor: {}", self.scale_factor)))
             .into()
     }
 }
 
 pub fn main() {
     App::new()
-        .insert_resource(WindowDescriptor {
-            scale_factor_override: Some(2.0f64),
-            ..Default::default()
-        })
         .add_plugins(DefaultPlugins)
-        // .insert_resource(IcedSettings { scale_factor: 4.0f64 })
         .add_plugin(IcedPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
@@ -68,7 +75,8 @@ pub fn main() {
         .add_startup_system(build_program)
         .add_system(tick)
         .add_system(box_system)
-        .add_system(mouse_wheel)
+        .add_system(update_scale_factor)
+        .add_system(update_ui_scale_data)
         .run();
 }
 
@@ -99,10 +107,33 @@ pub fn box_system(mut commands: Commands, mut program: ResMut<State<MainUi>>) {
     }
 }
 
-pub fn mouse_wheel(mut windows: ResMut<Windows>, mut wheel: EventReader<MouseWheel>) {
-    let primary = windows.primary_mut();
-    for event in wheel.iter() {
-        let scale_factor = (primary.scale_factor() + (event.y / 10.0) as f64).max(1.0);
-        primary.set_scale_factor_override(Some(scale_factor));
+pub fn update_scale_factor(
+    mut commands: Commands,
+    windows: Res<Windows>,
+    mut wheel: EventReader<MouseWheel>,
+    iced_settings: Option<ResMut<IcedSettings>>,
+) {
+    if wheel.is_empty() {
+        return;
     }
+    if let Some(mut settings) = iced_settings {
+        for event in wheel.iter() {
+            settings.scale_factor = (settings.scale_factor + (event.y / 10.0) as f64).max(1.0);
+        }
+    } else {
+        commands.insert_resource(IcedSettings {
+            scale_factor: windows.primary().scale_factor(),
+        });
+    }
+}
+
+pub fn update_ui_scale_data(
+    windows: Res<Windows>,
+    mut program: ResMut<State<MainUi>>,
+    iced_settings: Option<ResMut<IcedSettings>>,
+) {
+    let scale_factor = iced_settings
+        .map(|x| x.scale_factor)
+        .unwrap_or(windows.primary().scale_factor());
+    program.queue_message(UiMessage::Rescaled(scale_factor));
 }
