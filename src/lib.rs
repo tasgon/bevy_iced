@@ -36,8 +36,8 @@ use std::{cell::RefCell, sync::Arc};
 
 use crate::render::IcedNode;
 use bevy::prelude::{NonSendMut, Res, ResMut};
-use bevy::render::RenderStage;
 use bevy::render::render_graph::RenderGraph;
+use bevy::render::RenderStage;
 use bevy::window::Windows;
 use bevy::{
     prelude::{App, Plugin, World},
@@ -71,8 +71,7 @@ impl Plugin for IcedPlugin {
         app.add_system(systems::process_input)
             .add_system(render::update_viewport)
             .insert_resource(Vec::<IcedEvent>::new())
-            .insert_resource(default_viewport.clone())
-            .init_resource::<render::IcedSettings>();
+            .insert_resource(default_viewport.clone());
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.insert_non_send_resource(RefCell::new(Vec::<DrawFn>::new()));

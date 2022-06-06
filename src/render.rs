@@ -24,21 +24,20 @@ pub struct IcedSettings {
     pub scale_factor: f64,
 }
 
-impl Default for IcedSettings {
-    fn default() -> Self {
-        Self { scale_factor: 1.0f64 }
-    }
-}
-
 pub(crate) fn update_viewport(
     windows: Res<Windows>,
-    settings: Res<IcedSettings>,
+    iced_settings: Option<Res<IcedSettings>>,
     mut commands: Commands,
 ) {
     let window = windows.get_primary().unwrap();
+    let scale_factor = if let Some(settings) = iced_settings {
+        settings.scale_factor
+    } else {
+        window.scale_factor()
+    };
     let viewport = Viewport::with_physical_size(
         Size::new(window.physical_width(), window.physical_height()),
-        settings.scale_factor,
+        scale_factor,
     );
     commands.insert_resource(viewport);
 }
@@ -53,21 +52,19 @@ pub struct IcedRenderData<'a> {
 }
 
 pub struct IcedNode {
-    size: wgpu::Extent3d,
     staging_belt: Mutex<StagingBelt>,
 }
 
 impl IcedNode {
     pub fn new() -> Self {
         Self {
-            size: Default::default(),
             staging_belt: Mutex::new(StagingBelt::new(5 * 1024)),
         }
     }
 }
 
 impl Node for IcedNode {
-    fn update(&mut self, world: &mut bevy::prelude::World) {
+    fn update(&mut self, _world: &mut bevy::prelude::World) {
         let mut pool = LocalPool::new();
         pool.spawner()
             .spawn(self.staging_belt.lock().unwrap().recall())

@@ -1,12 +1,13 @@
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    prelude::*, input::mouse::MouseWheel,
+    input::mouse::MouseWheel,
+    prelude::*,
 };
-use bevy_iced::{iced::{
+use bevy_iced::iced::{
     program::State,
     widget::{button, Button, Row, Text},
     Element, Program,
-}, IcedSettings};
+};
 use bevy_iced::{IcedAppExtensions, IcedPlugin};
 use bevy_inspector_egui::WorldInspectorPlugin;
 
@@ -53,8 +54,12 @@ impl Program for MainUi {
 
 pub fn main() {
     App::new()
+        .insert_resource(WindowDescriptor {
+            scale_factor_override: Some(2.0f64),
+            ..Default::default()
+        })
         .add_plugins(DefaultPlugins)
-        .insert_resource(IcedSettings { scale_factor: 4.0f64 })
+        // .insert_resource(IcedSettings { scale_factor: 4.0f64 })
         .add_plugin(IcedPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
@@ -94,10 +99,10 @@ pub fn box_system(mut commands: Commands, mut program: ResMut<State<MainUi>>) {
     }
 }
 
-pub fn mouse_wheel(mut iced_settings: ResMut<IcedSettings>, mut wheel: EventReader<MouseWheel>) {
+pub fn mouse_wheel(mut windows: ResMut<Windows>, mut wheel: EventReader<MouseWheel>) {
+    let primary = windows.primary_mut();
     for event in wheel.iter() {
-        println!{"scroll: {}", event.y};
-        iced_settings.scale_factor += (event.y / 10.0) as f64;
-        iced_settings.scale_factor = iced_settings.scale_factor.max(0.5);
+        let scale_factor = (primary.scale_factor() + (event.y / 10.0) as f64).max(1.0);
+        primary.set_scale_factor_override(Some(scale_factor));
     }
 }
