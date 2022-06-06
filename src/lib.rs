@@ -78,6 +78,7 @@ type DrawFn = Box<dyn FnMut(&World, &mut RenderContext, &Viewport, &mut render::
 struct IcedProgramData<T> {
     renderer: iced_wgpu::Renderer,
     debug: iced_native::Debug,
+    viewport: Viewport,
     _phantom: PhantomData<T>,
 }
 
@@ -123,6 +124,7 @@ macro_rules! base_insert_proc {
         let update_data = Arc::new(IcedProgramData::<T> {
             renderer,
             debug,
+            viewport,
             _phantom: Default::default(),
         });
         let draw_data = update_data.clone();
@@ -136,6 +138,7 @@ macro_rules! base_insert_proc {
                 let IcedProgramData::<T> {
                     renderer,
                     debug,
+                    viewport,
                     _phantom,
                 } = unsafe { get_rc_mut(&mut *data) };
 
@@ -167,13 +170,16 @@ macro_rules! base_insert_proc {
         let draw_fn: DrawFn = Box::new(
             move |_world: &World,
                   ctx: &mut RenderContext,
-                  viewport: &Viewport,
+                  current_viewport: &Viewport,
                   data: &mut IcedRenderData| {
                 let IcedProgramData::<T> {
                     renderer,
                     debug,
+                    ref mut viewport,
                     _phantom,
                 } = unsafe { get_rc_mut(&draw_data) };
+
+                *viewport = current_viewport.clone();
 
                 let device = ctx.render_device.wgpu_device();
 

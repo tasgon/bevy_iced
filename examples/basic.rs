@@ -53,10 +53,6 @@ impl Program for MainUi {
 
 pub fn main() {
     App::new()
-        .insert_resource(WindowDescriptor {
-            vsync: false,
-            ..Default::default()
-        })
         .add_plugins(DefaultPlugins)
         .add_plugin(IcedPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())

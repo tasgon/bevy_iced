@@ -50,7 +50,7 @@ impl Node for IcedNode {
         };
 
         if self.size != size {
-            self.viewport = Viewport::with_physical_size(Size::new(size.width, size.height), 1.0);
+            self.viewport = Viewport::with_physical_size(Size::new(size.width, size.height), 2.0);
         }
 
         let mut pool = LocalPool::new();
