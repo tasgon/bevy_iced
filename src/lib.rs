@@ -1,4 +1,4 @@
-//! # Use iced UI programs in your Bevy application
+//! # Use Iced UI programs in your Bevy application
 //!
 //! ```no_run
 //! use bevy::prelude::*;
@@ -249,6 +249,7 @@ pub(crate) fn setup_pipeline(graph: &mut RenderGraph) {
         .unwrap();
 }
 
+// TODO: find a cleaner way to share data between the update and render cycles; this needs to go.
 unsafe fn get_rc_mut<'a, T>(rc: &'a Arc<T>) -> &'a mut T {
     let data = &**rc as *const T as *mut T;
     &mut *data

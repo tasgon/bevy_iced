@@ -18,6 +18,7 @@ use crate::DrawFn;
 
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
 
+/// Settings used to independently customize Iced rendering.
 #[derive(Clone)]
 pub struct IcedSettings {
     /// The scale factor to use for rendering Iced windows.

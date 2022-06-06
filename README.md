@@ -1,4 +1,4 @@
-# `bevy_iced`: use [iced](https://github.com/iced-rs/iced) UI programs in your [Bevy](https://github.com/bevyengine/bevy/) application
+# `bevy_iced`: use [Iced](https://github.com/iced-rs/iced) UI programs in your [Bevy](https://github.com/bevyengine/bevy/) application
 
 ## Example
 
@@ -6,7 +6,7 @@
 use bevy::prelude::*;
 use bevy_iced::{
     IcedAppExtensions, IcedPlugin,
-    iced::{Program, program::State}
+    iced::{Program, program::State},
 };
 
 #[derive(Default)]
@@ -37,7 +37,6 @@ See the [examples](https://github.com/tasgon/bevy_iced/tree/master/examples) and
 
 ## Todo
 
-- Properly update viewport information
 - Multi-window support
 - Bind programs to individual stages
 
