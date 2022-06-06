@@ -1,12 +1,12 @@
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    prelude::*,
+    prelude::*, input::mouse::MouseWheel,
 };
-use bevy_iced::iced::{
+use bevy_iced::{iced::{
     program::State,
     widget::{button, Button, Row, Text},
     Element, Program,
-};
+}, IcedSettings};
 use bevy_iced::{IcedAppExtensions, IcedPlugin};
 use bevy_inspector_egui::WorldInspectorPlugin;
 
@@ -54,6 +54,7 @@ impl Program for MainUi {
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .insert_resource(IcedSettings { scale_factor: 4.0f64 })
         .add_plugin(IcedPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
@@ -62,6 +63,7 @@ pub fn main() {
         .add_startup_system(build_program)
         .add_system(tick)
         .add_system(box_system)
+        .add_system(mouse_wheel)
         .run();
 }
 
@@ -89,5 +91,13 @@ pub fn box_system(mut commands: Commands, mut program: ResMut<State<MainUi>>) {
             ..Default::default()
         });
         program.queue_message(UiMessage::BoxAdded);
+    }
+}
+
+pub fn mouse_wheel(mut iced_settings: ResMut<IcedSettings>, mut wheel: EventReader<MouseWheel>) {
+    for event in wheel.iter() {
+        println!{"scroll: {}", event.y};
+        iced_settings.scale_factor += (event.y / 10.0) as f64;
+        iced_settings.scale_factor = iced_settings.scale_factor.max(0.5);
     }
 }

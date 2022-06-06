@@ -36,6 +36,7 @@ use std::{cell::RefCell, sync::Arc};
 
 use crate::render::IcedNode;
 use bevy::prelude::{NonSendMut, Res, ResMut};
+use bevy::render::RenderStage;
 use bevy::render::render_graph::RenderGraph;
 use bevy::window::Windows;
 use bevy::{
@@ -57,17 +58,26 @@ mod conversions;
 mod render;
 mod systems;
 
+pub use render::IcedSettings;
+
 /// The main feature of `bevy_iced`.
 /// Add this to your [`App`](`bevy::prelude::App`) by calling `app.add_plugin(bevy_iced::IcedPlugin)`.
 pub struct IcedPlugin;
 
 impl Plugin for IcedPlugin {
     fn build(&self, app: &mut App) {
+        let default_viewport = Viewport::with_physical_size(Size::new(1600, 900), 1.0);
+
         app.add_system(systems::process_input)
-            .insert_resource(Vec::<IcedEvent>::new());
+            .add_system(render::update_viewport)
+            .insert_resource(Vec::<IcedEvent>::new())
+            .insert_resource(default_viewport.clone())
+            .init_resource::<render::IcedSettings>();
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.insert_non_send_resource(RefCell::new(Vec::<DrawFn>::new()));
+        render_app.insert_resource(default_viewport);
+        render_app.add_system_to_stage(RenderStage::Extract, render::extract_iced_data);
         // render_app.init_resource::<render::IcedPipeline>();
         setup_pipeline(&mut render_app.world.get_resource_mut().unwrap());
     }
@@ -78,7 +88,6 @@ type DrawFn = Box<dyn FnMut(&World, &mut RenderContext, &Viewport, &mut render::
 struct IcedProgramData<T> {
     renderer: iced_wgpu::Renderer,
     debug: iced_native::Debug,
-    viewport: Viewport,
     _phantom: PhantomData<T>,
 }
 
@@ -124,7 +133,6 @@ macro_rules! base_insert_proc {
         let update_data = Arc::new(IcedProgramData::<T> {
             renderer,
             debug,
-            viewport,
             _phantom: Default::default(),
         });
         let draw_data = update_data.clone();
@@ -134,11 +142,11 @@ macro_rules! base_insert_proc {
             move |mut state: $state_type,
                   mut data: NonSendMut<Arc<IcedProgramData<T>>>,
                   windows: Res<Windows>,
+                  viewport: Res<Viewport>,
                   events: Res<Vec<IcedEvent>>| {
                 let IcedProgramData::<T> {
                     renderer,
                     debug,
-                    viewport,
                     _phantom,
                 } = unsafe { get_rc_mut(&mut *data) };
 
@@ -146,13 +154,15 @@ macro_rules! base_insert_proc {
                     state.queue_event(ev.clone());
                 }
 
+                let size = viewport.logical_size();
+
                 if !state.is_queue_empty() {
                     let window = windows.get_primary().unwrap();
                     let cursor_position = window.cursor_position().map_or(
                         iced_native::Point { x: 0.0, y: 0.0 },
                         |p| iced_native::Point {
-                            x: p.x,
-                            y: window.height() - p.y,
+                            x: p.x * size.width / window.width(),
+                            y: (window.height() - p.y) * size.height / window.height(),
                         },
                     );
 
@@ -175,11 +185,8 @@ macro_rules! base_insert_proc {
                 let IcedProgramData::<T> {
                     renderer,
                     debug,
-                    ref mut viewport,
                     _phantom,
                 } = unsafe { get_rc_mut(&draw_data) };
-
-                *viewport = current_viewport.clone();
 
                 let device = ctx.render_device.wgpu_device();
 
@@ -190,7 +197,7 @@ macro_rules! base_insert_proc {
                         &mut ctx.command_encoder,
                         data.view,
                         primitive,
-                        &viewport,
+                        current_viewport,
                         &debug.overlay(),
                     );
                 });

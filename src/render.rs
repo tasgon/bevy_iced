@@ -1,6 +1,10 @@
 use std::{cell::RefCell, sync::Mutex};
 
-use bevy::render::{render_graph::Node, render_resource::TextureView, view::ExtractedWindows};
+use bevy::{
+    prelude::{Commands, Res},
+    render::{render_graph::Node, render_resource::TextureView, view::ExtractedWindows},
+    window::Windows,
+};
 use iced_native::{
     futures::{executor::LocalPool, task::SpawnExt},
     Size,
@@ -14,6 +18,35 @@ use crate::DrawFn;
 
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
 
+#[derive(Clone)]
+pub struct IcedSettings {
+    /// The scale factor to use for rendering Iced windows.
+    pub scale_factor: f64,
+}
+
+impl Default for IcedSettings {
+    fn default() -> Self {
+        Self { scale_factor: 1.0f64 }
+    }
+}
+
+pub(crate) fn update_viewport(
+    windows: Res<Windows>,
+    settings: Res<IcedSettings>,
+    mut commands: Commands,
+) {
+    let window = windows.get_primary().unwrap();
+    let viewport = Viewport::with_physical_size(
+        Size::new(window.physical_width(), window.physical_height()),
+        settings.scale_factor,
+    );
+    commands.insert_resource(viewport);
+}
+
+pub(crate) fn extract_iced_data(mut commands: Commands, viewport: Res<Viewport>) {
+    commands.insert_resource(viewport.clone());
+}
+
 pub struct IcedRenderData<'a> {
     pub view: &'a TextureView,
     pub staging_belt: &'a mut wgpu::util::StagingBelt,
@@ -21,7 +54,6 @@ pub struct IcedRenderData<'a> {
 
 pub struct IcedNode {
     size: wgpu::Extent3d,
-    viewport: Viewport,
     staging_belt: Mutex<StagingBelt>,
 }
 
@@ -29,7 +61,6 @@ impl IcedNode {
     pub fn new() -> Self {
         Self {
             size: Default::default(),
-            viewport: Viewport::with_physical_size(Size::new(100, 100), 1.0),
             staging_belt: Mutex::new(StagingBelt::new(5 * 1024)),
         }
     }
@@ -37,22 +68,6 @@ impl IcedNode {
 
 impl Node for IcedNode {
     fn update(&mut self, world: &mut bevy::prelude::World) {
-        let window = world
-            .get_resource::<ExtractedWindows>()
-            .unwrap()
-            .values()
-            .next()
-            .unwrap();
-        let size = wgpu::Extent3d {
-            width: window.physical_width,
-            height: window.physical_height,
-            depth_or_array_layers: 1,
-        };
-
-        if self.size != size {
-            self.viewport = Viewport::with_physical_size(Size::new(size.width, size.height), 2.0);
-        }
-
         let mut pool = LocalPool::new();
         pool.spawner()
             .spawn(self.staging_belt.lock().unwrap().recall())
@@ -70,6 +85,8 @@ impl Node for IcedNode {
             .get_non_send_resource::<RefCell<Vec<DrawFn>>>()
             .unwrap();
 
+        let viewport = &world.get_resource::<Viewport>().unwrap();
+
         let extracted_window = &world
             .get_resource::<ExtractedWindows>()
             .unwrap()
@@ -85,7 +102,7 @@ impl Node for IcedNode {
             staging_belt,
         };
         for f in &mut *draw_fns.borrow_mut() {
-            (f)(world, render_context, &self.viewport, &mut render_data);
+            (f)(world, render_context, viewport, &mut render_data);
         }
         staging_belt.finish();
 
