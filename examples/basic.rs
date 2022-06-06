@@ -1,6 +1,6 @@
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    input::mouse::MouseWheel,
+    input::mouse::{MouseButtonInput, MouseWheel},
     prelude::*,
 };
 use bevy_iced::{
@@ -9,7 +9,7 @@ use bevy_iced::{
         widget::{button, Button, Row, Text},
         Element, Program,
     },
-    IcedSettings,
+    IcedRenderState, IcedSettings,
 };
 use bevy_iced::{IcedAppExtensions, IcedPlugin};
 use bevy_inspector_egui::WorldInspectorPlugin;
@@ -77,6 +77,7 @@ pub fn main() {
         .add_system(box_system)
         .add_system(update_scale_factor)
         .add_system(update_ui_scale_data)
+        .add_system(toggle_ui)
         .run();
 }
 
@@ -91,7 +92,11 @@ pub fn tick(mut sprites: Query<(&mut Sprite,)>, time: Res<Time>) {
     }
 }
 
-pub fn box_system(mut commands: Commands, mut program: ResMut<State<MainUi>>) {
+pub fn box_system(mut commands: Commands, program: Option<ResMut<State<MainUi>>>) {
+    if program.is_none() {
+        return;
+    }
+    let mut program = program.unwrap();
     let pos = (Vec3::new(rng(), rng(), 0.0) - Vec3::new(0.5, 0.5, 0.0)) * 300.0;
     if program.program().box_requested {
         commands.spawn_bundle(SpriteBundle {
@@ -127,13 +132,34 @@ pub fn update_scale_factor(
     }
 }
 
+pub fn toggle_ui(
+    mut commands: Commands,
+    mut buttons: EventReader<MouseButtonInput>,
+    mut render_state: Option<ResMut<IcedRenderState<MainUi>>>,
+) {
+    for ev in buttons.iter() {
+        if ev.button == MouseButton::Right {
+            if let Some(ref mut state) = render_state {
+                state.active = !state.active;
+            } else {
+                commands.insert_resource(IcedRenderState::<MainUi>::active(false));
+            }
+        }
+    }
+}
+
 pub fn update_ui_scale_data(
     windows: Res<Windows>,
-    mut program: ResMut<State<MainUi>>,
+    program: Option<ResMut<State<MainUi>>>,
     iced_settings: Option<ResMut<IcedSettings>>,
 ) {
+    if program.is_none() {
+        return;
+    }
     let scale_factor = iced_settings
         .map(|x| x.scale_factor)
         .unwrap_or(windows.primary().scale_factor());
-    program.queue_message(UiMessage::Rescaled(scale_factor));
+    program
+        .unwrap()
+        .queue_message(UiMessage::Rescaled(scale_factor));
 }

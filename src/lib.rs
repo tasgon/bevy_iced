@@ -40,7 +40,7 @@ use bevy::render::render_graph::RenderGraph;
 use bevy::render::RenderStage;
 use bevy::window::Windows;
 use bevy::{
-    prelude::{App, Plugin, World},
+    prelude::{App, Commands, Plugin, World},
     render::{
         renderer::{RenderContext, RenderDevice},
         texture::BevyDefault,
@@ -90,6 +90,43 @@ struct IcedProgramData<T> {
     _phantom: PhantomData<T>,
 }
 
+/// The user-defined rendering state of an Iced program.
+pub struct IcedRenderState<T> {
+    /// Used to set whether an Iced program should be updated and displayed.
+    pub active: bool,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> IcedRenderState<T> {
+    pub fn active(active: bool) -> Self {
+        Self {
+            active,
+            _phantom: Default::default(),
+        }
+    }
+}
+
+impl<T> Default for IcedRenderState<T> {
+    fn default() -> Self {
+        Self {
+            active: true,
+            _phantom: Default::default(),
+        }
+    }
+}
+
+impl<T> Clone for IcedRenderState<T> {
+    fn clone(&self) -> Self {
+        Self {
+            active: self.active,
+            _phantom: Default::default(),
+        }
+    }
+}
+
+unsafe impl<T> Send for IcedRenderState<T> {}
+unsafe impl<T> Sync for IcedRenderState<T> {}
+
 /// A trait that adds the necessary features for an [`App`](`bevy::prelude::App`)
 /// to handle Iced.
 pub trait IcedAppExtensions {
@@ -138,49 +175,62 @@ macro_rules! base_insert_proc {
         $app.insert_non_send_resource(update_data.clone());
 
         $app.add_system(
-            move |mut state: $state_type,
+            move |program_state: Option<$state_type>,
                   mut data: NonSendMut<Arc<IcedProgramData<T>>>,
                   windows: Res<Windows>,
                   viewport: Res<Viewport>,
                   events: Res<Vec<IcedEvent>>| {
-                let IcedProgramData::<T> {
-                    renderer,
-                    debug,
-                    _phantom,
-                } = unsafe { get_rc_mut(&mut *data) };
-
-                for ev in &*events {
-                    state.queue_event(ev.clone());
-                }
-
-                let size = viewport.logical_size();
-
-                if !state.is_queue_empty() {
-                    let window = windows.get_primary().unwrap();
-                    let cursor_position = window.cursor_position().map_or(
-                        iced_native::Point { x: 0.0, y: 0.0 },
-                        |p| iced_native::Point {
-                            x: p.x * size.width / window.width(),
-                            y: (window.height() - p.y) * size.height / window.height(),
-                        },
-                    );
-
-                    state.update(
-                        viewport.logical_size(),
-                        cursor_position,
+                if let Some(mut state) = program_state {
+                    let IcedProgramData::<T> {
                         renderer,
-                        &mut clipboard,
                         debug,
-                    );
+                        _phantom,
+                    } = unsafe { get_rc_mut(&mut *data) };
+
+                    for ev in &*events {
+                        state.queue_event(ev.clone());
+                    }
+
+                    let size = viewport.logical_size();
+
+                    if !state.is_queue_empty() {
+                        let window = windows.get_primary().unwrap();
+                        let cursor_position = window.cursor_position().map_or(
+                            iced_native::Point { x: 0.0, y: 0.0 },
+                            |p| iced_native::Point {
+                                x: p.x * size.width / window.width(),
+                                y: (window.height() - p.y) * size.height / window.height(),
+                            },
+                        );
+
+                        state.update(
+                            viewport.logical_size(),
+                            cursor_position,
+                            renderer,
+                            &mut clipboard,
+                            debug,
+                        );
+                    }
                 }
             },
         );
 
+        $app.sub_app_mut(RenderApp).add_system_to_stage(
+            RenderStage::Extract,
+            |mut commands: Commands, state: Option<Res<IcedRenderState<T>>>| {
+                commands.insert_resource(state.map(|x| x.clone()).unwrap_or_default());
+            },
+        );
+
         let draw_fn: DrawFn = Box::new(
-            move |_world: &World,
+            move |world: &World,
                   ctx: &mut RenderContext,
                   current_viewport: &Viewport,
                   data: &mut IcedRenderData| {
+                if !world.get_resource::<IcedRenderState<T>>().unwrap().active {
+                    return;
+                }
+
                 let IcedProgramData::<T> {
                     renderer,
                     debug,

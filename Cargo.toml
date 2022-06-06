@@ -1,6 +1,6 @@
 [package]
 name = "bevy_iced"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Iced integration for Bevy"
 authors = ["tasgon <tasgon_@outlook.com>"]
