@@ -25,7 +25,7 @@
 //!         .run();
 //! }
 //!
-//! pub fn ui_system(mut ui_state: ResMut<State<Ui>>, /* ... */) {
+//! pub fn ui_system(mut ui_state: NonSendMut<State<Ui>>, /* ... */) {
 //!     // Do some work here, then modify your ui state by running
 //!     // ui_state.queue_message(..);
 //! }
@@ -35,7 +35,7 @@ use std::marker::PhantomData;
 use std::{cell::RefCell, sync::Arc};
 
 use crate::render::IcedNode;
-use bevy::prelude::{NonSendMut, Res, ResMut};
+use bevy::prelude::{NonSendMut, Res, ResMut, Resource, Deref, DerefMut, Component};
 use bevy::render::render_graph::RenderGraph;
 use bevy::render::RenderStage;
 use bevy::window::Windows;
@@ -48,17 +48,17 @@ use bevy::{
     },
 };
 pub use iced_native as iced;
-use iced_native::Event as IcedEvent;
 use iced_native::{program, Debug, Program, Size};
 pub use iced_wgpu;
 use iced_wgpu::{wgpu, Viewport};
-use render::IcedRenderData;
+use crate::render::{IcedRenderData, ViewportResource};
 
 mod conversions;
 mod render;
 mod systems;
 
 pub use render::IcedSettings;
+use systems::IcedEventQueue;
 
 /// The main feature of `bevy_iced`.
 /// Add this to your [`App`](`bevy::prelude::App`) by calling `app.add_plugin(bevy_iced::IcedPlugin)`.
@@ -67,10 +67,11 @@ pub struct IcedPlugin;
 impl Plugin for IcedPlugin {
     fn build(&self, app: &mut App) {
         let default_viewport = Viewport::with_physical_size(Size::new(1600, 900), 1.0);
+        let default_viewport = ViewportResource(default_viewport);
 
         app.add_system(systems::process_input)
             .add_system(render::update_viewport)
-            .insert_resource(Vec::<IcedEvent>::new())
+            .insert_resource(IcedEventQueue::default())
             .insert_resource(default_viewport.clone());
 
         let render_app = app.sub_app_mut(RenderApp);
@@ -84,6 +85,7 @@ impl Plugin for IcedPlugin {
 
 type DrawFn = Box<dyn FnMut(&World, &mut RenderContext, &Viewport, &mut render::IcedRenderData)>;
 
+#[derive(Resource)]
 struct IcedProgramData<T> {
     renderer: iced_wgpu::Renderer,
     debug: iced_native::Debug,
@@ -91,6 +93,7 @@ struct IcedProgramData<T> {
 }
 
 /// The user-defined rendering state of an Iced program.
+#[derive(Resource)]
 pub struct IcedRenderState<T> {
     /// Used to set whether an Iced program should be updated and displayed.
     pub active: bool,
@@ -132,15 +135,6 @@ unsafe impl<T> Sync for IcedRenderState<T> {}
 pub trait IcedAppExtensions {
     /// Insert a new [`Program`](`iced::Program`) and make it accessible as a resource.
     fn insert_program<
-        M: Send + Sync,
-        T: Program<Renderer = iced_wgpu::Renderer, Message = M> + Send + Sync + 'static,
-    >(
-        &mut self,
-        program: T,
-    ) -> &mut Self;
-
-    /// Insert a new [`Program`](`iced::Program`) and make it accessible as a `NonSend` resource.
-    fn insert_non_send_program<
         M,
         T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static,
     >(
@@ -157,7 +151,8 @@ macro_rules! base_insert_proc {
             .get_resource::<RenderDevice>()
             .unwrap()
             .wgpu_device();
-        let format = wgpu::TextureFormat::bevy_default();
+        // let format = wgpu::TextureFormat::bevy_default();
+        let format = wgpu::TextureFormat::Bgra8UnormSrgb;
         let mut renderer =
             iced_wgpu::Renderer::new(iced_wgpu::Backend::new(device, Default::default(), format));
         let viewport = Viewport::with_physical_size(Size::new(1600, 900), 1.0);
@@ -178,8 +173,8 @@ macro_rules! base_insert_proc {
             move |program_state: Option<$state_type>,
                   mut data: NonSendMut<Arc<IcedProgramData<T>>>,
                   windows: Res<Windows>,
-                  viewport: Res<Viewport>,
-                  events: Res<Vec<IcedEvent>>| {
+                  viewport: Res<ViewportResource>,
+                  events: Res<IcedEventQueue>| {
                 if let Some(mut state) = program_state {
                     let IcedProgramData::<T> {
                         renderer,
@@ -187,7 +182,7 @@ macro_rules! base_insert_proc {
                         _phantom,
                     } = unsafe { get_rc_mut(&mut *data) };
 
-                    for ev in &*events {
+                    for ev in &**events {
                         state.queue_event(ev.clone());
                     }
 
@@ -207,6 +202,8 @@ macro_rules! base_insert_proc {
                             viewport.logical_size(),
                             cursor_position,
                             renderer,
+                            &iced_wgpu::Theme::Dark,
+                            &iced_native::renderer::Style { text_color: iced_native::Color::WHITE },
                             &mut clipboard,
                             debug,
                         );
@@ -238,7 +235,6 @@ macro_rules! base_insert_proc {
                 } = unsafe { get_rc_mut(&draw_data) };
 
                 let device = ctx.render_device.wgpu_device();
-
                 renderer.with_primitives(|backend, primitive| {
                     backend.present(
                         device,
@@ -266,17 +262,6 @@ macro_rules! base_insert_proc {
 
 impl IcedAppExtensions for App {
     fn insert_program<
-        M: Send + Sync,
-        T: Program<Renderer = iced_wgpu::Renderer, Message = M> + Send + Sync + 'static,
-    >(
-        &mut self,
-        program: T,
-    ) -> &mut Self {
-        let resource = base_insert_proc!(self, program, ResMut<program::State<T>>);
-        self.insert_resource(resource)
-    }
-
-    fn insert_non_send_program<
         M,
         T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static,
     >(
@@ -293,7 +278,7 @@ pub(crate) fn setup_pipeline(graph: &mut RenderGraph) {
 
     graph
         .add_node_edge(
-            bevy::core_pipeline::node::MAIN_PASS_DRIVER,
+            bevy::render::main_graph::node::CAMERA_DRIVER,
             render::ICED_PASS,
         )
         .unwrap();

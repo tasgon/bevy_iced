@@ -50,10 +50,10 @@ impl Program for MainUi {
         iced_native::Command::none()
     }
 
-    fn view(&mut self) -> Element<'_, Self::Message, Self::Renderer> {
+    fn view(&self) -> Element<'_, Self::Message, Self::Renderer> {
         let row = Row::new()
             .push(
-                Button::new(&mut self.btn, Text::new("Request box"))
+                Button::new(Text::new("Request box"))
                     .on_press(UiMessage::BoxRequested),
             )
             .push(Text::new(format!("{} boxes", self.count)));
@@ -82,17 +82,17 @@ pub fn main() {
 }
 
 fn build_program(mut commands: Commands) {
-    commands.spawn_bundle(OrthographicCameraBundle::new_2d());
+    commands.spawn(Camera2dBundle::default());
 }
 
 pub fn tick(mut sprites: Query<(&mut Sprite,)>, time: Res<Time>) {
     for (mut s,) in sprites.iter_mut() {
         s.custom_size =
-            Some(Vec2::new(50.0, 50.0) * time.time_since_startup().as_secs_f32().sin().abs());
+            Some(Vec2::new(50.0, 50.0) * time.elapsed_seconds().sin().abs());
     }
 }
 
-pub fn box_system(mut commands: Commands, program: Option<ResMut<State<MainUi>>>) {
+pub fn box_system(mut commands: Commands, program: Option<NonSendMut<State<MainUi>>>) {
     if program.is_none() {
         return;
     }
@@ -150,7 +150,7 @@ pub fn toggle_ui(
 
 pub fn update_ui_scale_data(
     windows: Res<Windows>,
-    program: Option<ResMut<State<MainUi>>>,
+    program: Option<NonSendMut<State<MainUi>>>,
     iced_settings: Option<ResMut<IcedSettings>>,
 ) {
     if program.is_none() {

@@ -13,10 +13,10 @@ documentation = "https://docs.rs/bevy_iced"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.7"
-iced_wgpu = "0.5"
-iced_native = "0.5"
+bevy = "0.9"
+iced_wgpu = "0.7"
+iced_native = "0.7"
 
 [dev-dependencies]
 rand = "0.8"
-bevy-inspector-egui = "0.10"
+bevy-inspector-egui = "0.15"

@@ -1,12 +1,11 @@
 use std::{cell::RefCell, sync::Mutex};
 
 use bevy::{
-    prelude::{Commands, Res},
-    render::{render_graph::Node, render_resource::TextureView, view::ExtractedWindows},
+    prelude::{Commands, Res, Resource, Deref, DerefMut},
+    render::{render_graph::Node, render_resource::TextureView, view::ExtractedWindows, Extract},
     window::Windows,
 };
 use iced_native::{
-    futures::{executor::LocalPool, task::SpawnExt},
     Size,
 };
 use iced_wgpu::{
@@ -19,11 +18,14 @@ use crate::DrawFn;
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
 
 /// Settings used to independently customize Iced rendering.
-#[derive(Clone)]
+#[derive(Clone, Resource)]
 pub struct IcedSettings {
     /// The scale factor to use for rendering Iced windows.
     pub scale_factor: f64,
 }
+
+#[derive(Resource, Deref, DerefMut, Clone)]
+pub(crate) struct ViewportResource(pub Viewport);
 
 pub(crate) fn update_viewport(
     windows: Res<Windows>,
@@ -40,10 +42,10 @@ pub(crate) fn update_viewport(
         Size::new(window.physical_width(), window.physical_height()),
         scale_factor,
     );
-    commands.insert_resource(viewport);
+    commands.insert_resource(ViewportResource(viewport));
 }
 
-pub(crate) fn extract_iced_data(mut commands: Commands, viewport: Res<Viewport>) {
+pub(crate) fn extract_iced_data(mut commands: Commands, viewport: Extract<Res<ViewportResource>>) {
     commands.insert_resource(viewport.clone());
 }
 
@@ -66,11 +68,7 @@ impl IcedNode {
 
 impl Node for IcedNode {
     fn update(&mut self, _world: &mut bevy::prelude::World) {
-        let mut pool = LocalPool::new();
-        pool.spawner()
-            .spawn(self.staging_belt.lock().unwrap().recall())
-            .unwrap();
-        pool.run_until_stalled();
+        self.staging_belt.lock().unwrap().recall()
     }
 
     fn run(
@@ -83,15 +81,14 @@ impl Node for IcedNode {
             .get_non_send_resource::<RefCell<Vec<DrawFn>>>()
             .unwrap();
 
-        let viewport = &world.get_resource::<Viewport>().unwrap();
+        let viewport = world.get_resource::<ViewportResource>().unwrap();
 
-        let extracted_window = &world
+        let Some(extracted_window) = world
             .get_resource::<ExtractedWindows>()
             .unwrap()
             .windows
             .values()
-            .next()
-            .unwrap();
+            .next() else { return Ok(()) };
         let swap_chain_texture = extracted_window.swap_chain_texture.as_ref().unwrap();
         let staging_belt = &mut *self.staging_belt.lock().unwrap();
 
