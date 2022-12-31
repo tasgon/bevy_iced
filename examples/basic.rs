@@ -9,7 +9,7 @@ use bevy_iced::{
         widget::{button, Button, Row, Text},
         Element, Program,
     },
-    IcedRenderState, IcedSettings,
+    IcedSettings,
 };
 use bevy_iced::{IcedAppExtensions, IcedPlugin};
 use bevy_inspector_egui::WorldInspectorPlugin;
@@ -26,7 +26,6 @@ pub enum UiMessage {
 
 #[derive(Default)]
 pub struct MainUi {
-    btn: button::State,
     pub count: u32,
     pub box_requested: bool,
     pub scale_factor: f64,
@@ -52,10 +51,7 @@ impl Program for MainUi {
 
     fn view(&self) -> Element<'_, Self::Message, Self::Renderer> {
         let row = Row::new()
-            .push(
-                Button::new(Text::new("Request box"))
-                    .on_press(UiMessage::BoxRequested),
-            )
+            .push(Button::new(Text::new("Request box")).on_press(UiMessage::BoxRequested))
             .push(Text::new(format!("{} boxes", self.count)));
         Column::new()
             .push(row)
@@ -77,7 +73,7 @@ pub fn main() {
         .add_system(box_system)
         .add_system(update_scale_factor)
         .add_system(update_ui_scale_data)
-        .add_system(toggle_ui)
+        // .add_system(toggle_ui)
         .run();
 }
 
@@ -87,8 +83,7 @@ fn build_program(mut commands: Commands) {
 
 pub fn tick(mut sprites: Query<(&mut Sprite,)>, time: Res<Time>) {
     for (mut s,) in sprites.iter_mut() {
-        s.custom_size =
-            Some(Vec2::new(50.0, 50.0) * time.elapsed_seconds().sin().abs());
+        s.custom_size = Some(Vec2::new(50.0, 50.0) * time.elapsed_seconds().sin().abs());
     }
 }
 
@@ -132,21 +127,21 @@ pub fn update_scale_factor(
     }
 }
 
-pub fn toggle_ui(
-    mut commands: Commands,
-    mut buttons: EventReader<MouseButtonInput>,
-    mut render_state: Option<ResMut<IcedRenderState<MainUi>>>,
-) {
-    for ev in buttons.iter() {
-        if ev.button == MouseButton::Right {
-            if let Some(ref mut state) = render_state {
-                state.active = !state.active;
-            } else {
-                commands.insert_resource(IcedRenderState::<MainUi>::active(false));
-            }
-        }
-    }
-}
+// pub fn toggle_ui(
+//     mut commands: Commands,
+//     mut buttons: EventReader<MouseButtonInput>,
+//     mut render_state: Option<ResMut<IcedRenderState<MainUi>>>,
+// ) {
+//     for ev in buttons.iter() {
+//         if ev.button == MouseButton::Right {
+//             if let Some(ref mut state) = render_state {
+//                 state.active = !state.active;
+//             } else {
+//                 commands.insert_resource(IcedRenderState::<MainUi>::active(false));
+//             }
+//         }
+//     }
+// }
 
 pub fn update_ui_scale_data(
     windows: Res<Windows>,

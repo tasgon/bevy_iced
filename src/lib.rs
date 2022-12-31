@@ -31,13 +31,18 @@
 //! }
 //! ```
 
+use std::any::TypeId;
 use std::marker::PhantomData;
+use std::ops::Deref;
+use std::sync::{RwLock, Mutex};
 use std::{cell::RefCell, sync::Arc};
 
 use crate::render::IcedNode;
-use bevy::prelude::{NonSendMut, Res, ResMut, Resource, Deref, DerefMut, Component};
+use crate::render::{IcedRenderData, ViewportResource};
+use bevy::prelude::{Component, Deref, DerefMut, NonSendMut, Res, ResMut, Resource, SystemSet};
 use bevy::render::render_graph::RenderGraph;
 use bevy::render::RenderStage;
+use bevy::utils::{HashMap, HashSet};
 use bevy::window::Windows;
 use bevy::{
     prelude::{App, Commands, Plugin, World},
@@ -51,7 +56,6 @@ pub use iced_native as iced;
 use iced_native::{program, Debug, Program, Size};
 pub use iced_wgpu;
 use iced_wgpu::{wgpu, Viewport};
-use crate::render::{IcedRenderData, ViewportResource};
 
 mod conversions;
 mod render;
@@ -85,62 +89,119 @@ impl Plugin for IcedPlugin {
 
 type DrawFn = Box<dyn FnMut(&World, &mut RenderContext, &Viewport, &mut render::IcedRenderData)>;
 
-#[derive(Resource)]
+pub struct IcedContext {
+    active: Option<TypeId>,
+    update_fns: HashMap<TypeId, fn(&mut World)>,
+    draw_fns: HashMap<TypeId, fn(&World, &mut RenderContext, &mut render::IcedRenderData)>
+}
+
+struct IcedProps {
+    renderer: iced_wgpu::Renderer,
+    debug: iced_native::Debug,
+    clipboard: iced_native::clipboard::Null
+}
+
+#[derive(Resource, Deref, DerefMut)]
+struct IcedPropsResource(Arc<Mutex<IcedProps>>);
+
 struct IcedProgramData<T> {
     renderer: iced_wgpu::Renderer,
     debug: iced_native::Debug,
     _phantom: PhantomData<T>,
 }
 
-/// The user-defined rendering state of an Iced program.
-#[derive(Resource)]
-pub struct IcedRenderState<T> {
-    /// Used to set whether an Iced program should be updated and displayed.
-    pub active: bool,
-    _phantom: PhantomData<T>,
-}
-
-impl<T> IcedRenderState<T> {
-    pub fn active(active: bool) -> Self {
-        Self {
-            active,
-            _phantom: Default::default(),
-        }
-    }
-}
-
-impl<T> Default for IcedRenderState<T> {
-    fn default() -> Self {
-        Self {
-            active: true,
-            _phantom: Default::default(),
-        }
-    }
-}
-
-impl<T> Clone for IcedRenderState<T> {
-    fn clone(&self) -> Self {
-        Self {
-            active: self.active,
-            _phantom: Default::default(),
-        }
-    }
-}
-
-unsafe impl<T> Send for IcedRenderState<T> {}
-unsafe impl<T> Sync for IcedRenderState<T> {}
-
 /// A trait that adds the necessary features for an [`App`](`bevy::prelude::App`)
 /// to handle Iced.
 pub trait IcedAppExtensions {
     /// Insert a new [`Program`](`iced::Program`) and make it accessible as a resource.
-    fn insert_program<
-        M,
-        T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static,
-    >(
+    fn insert_program<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static>(
         &mut self,
         program: T,
     ) -> &mut Self;
+}
+
+struct IcedProgram<M, T>(PhantomData<(M, T)>);
+
+impl<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static> IcedProgram<M, T> {
+    fn update_fn(world: &mut World) {
+        world.resource_scope::<program::State<T>, _>(|world, mut state| {
+            for ev in &**world.resource::<IcedEventQueue>() {
+                state.queue_event(ev.clone());
+            }
+            let bounds = world.resource::<ViewportResource>().logical_size();
+
+            world.resource_scope::<IcedPropsResource, _>(|world, ctx| {
+                let IcedProps {
+                    ref mut renderer,
+                    ref mut debug,
+                    ref mut clipboard,
+                    ..
+                } = &mut *ctx.lock().unwrap();
+                let windows = world.resource::<Windows>();
+                if !state.is_queue_empty() {
+                    let window = windows.get_primary().unwrap();
+                    let cursor_position = window.cursor_position().map_or(
+                        iced_native::Point { x: 0.0, y: 0.0 },
+                        |p| iced_native::Point {
+                            x: p.x * bounds.width / window.width(),
+                            y: (window.height() - p.y) * bounds.height / window.height(),
+                        },
+                    );
+                    
+                    state.update(
+                        bounds,
+                        cursor_position,
+                        renderer,
+                        &iced_wgpu::Theme::Dark,
+                        &iced_native::renderer::Style {
+                            text_color: iced_native::Color::WHITE,
+                        },
+                        clipboard,
+                        debug,
+                    );
+                }
+            });
+        });
+    }
+
+    fn draw_fn(world: &World, ctx: &mut RenderContext, data: &mut render::IcedRenderData) {
+        let viewport = unsafe {
+            world.get_resource_unchecked_mut::<ViewportResource>()
+        }.unwrap();
+        let IcedProps {
+            ref mut renderer,
+            ref mut debug,
+            ..
+        } = &mut *world.resource::<IcedPropsResource>().lock().unwrap();
+
+        let device = ctx.render_device.wgpu_device();
+        renderer.with_primitives(|backend, primitive| {
+            backend.present(
+                device,
+                data.staging_belt,
+                &mut ctx.command_encoder,
+                data.view,
+                primitive,
+                &viewport,
+                &debug.overlay(),
+            );
+        });
+    }
+}
+
+fn create_state<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static>(
+    app: &mut App,
+    program: T,
+) {
+    let render_world = &mut app.sub_app_mut(RenderApp).world;
+    let bounds = render_world.resource::<ViewportResource>().logical_size();
+    let IcedProps {
+        ref mut renderer,
+        ref mut debug,
+        ..
+    } = &mut *render_world.non_send_resource_mut::<_>();
+
+    let state = program::State::new(program, bounds, renderer, debug);
 }
 
 macro_rules! base_insert_proc {
@@ -203,7 +264,9 @@ macro_rules! base_insert_proc {
                             cursor_position,
                             renderer,
                             &iced_wgpu::Theme::Dark,
-                            &iced_native::renderer::Style { text_color: iced_native::Color::WHITE },
+                            &iced_native::renderer::Style {
+                                text_color: iced_native::Color::WHITE,
+                            },
                             &mut clipboard,
                             debug,
                         );
@@ -212,21 +275,11 @@ macro_rules! base_insert_proc {
             },
         );
 
-        $app.sub_app_mut(RenderApp).add_system_to_stage(
-            RenderStage::Extract,
-            |mut commands: Commands, state: Option<Res<IcedRenderState<T>>>| {
-                commands.insert_resource(state.map(|x| x.clone()).unwrap_or_default());
-            },
-        );
-
         let draw_fn: DrawFn = Box::new(
             move |world: &World,
                   ctx: &mut RenderContext,
                   current_viewport: &Viewport,
                   data: &mut IcedRenderData| {
-                if !world.get_resource::<IcedRenderState<T>>().unwrap().active {
-                    return;
-                }
 
                 let IcedProgramData::<T> {
                     renderer,
@@ -261,10 +314,7 @@ macro_rules! base_insert_proc {
 }
 
 impl IcedAppExtensions for App {
-    fn insert_program<
-        M,
-        T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static,
-    >(
+    fn insert_program<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static>(
         &mut self,
         program: T,
     ) -> &mut Self {

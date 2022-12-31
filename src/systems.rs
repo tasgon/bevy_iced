@@ -1,6 +1,6 @@
 use crate::conversions;
 use bevy::input::mouse::MouseButtonInput;
-use bevy::prelude::{ResMut, Resource, Deref, DerefMut};
+use bevy::prelude::{Deref, DerefMut, ResMut, Resource};
 use bevy::{
     ecs::system::SystemParam,
     input::{keyboard::KeyboardInput, mouse::MouseWheel},
@@ -36,9 +36,7 @@ pub fn process_input(mut events: InputEvents, mut event_queue: ResMut<IcedEventQ
         let button = conversions::mouse_button(ev.button);
         event_queue.push(IcedEvent::Mouse(match ev.state {
             bevy::input::ButtonState::Pressed => iced_native::mouse::Event::ButtonPressed(button),
-            bevy::input::ButtonState::Released => {
-                iced_native::mouse::Event::ButtonReleased(button)
-            }
+            bevy::input::ButtonState::Released => iced_native::mouse::Event::ButtonReleased(button),
         }))
     }
 
