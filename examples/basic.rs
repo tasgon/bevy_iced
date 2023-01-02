@@ -1,12 +1,12 @@
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    input::mouse::{MouseButtonInput, MouseWheel},
+    input::mouse::MouseWheel,
     prelude::*,
 };
 use bevy_iced::{
     iced::{
         program::State,
-        widget::{button, Button, Row, Text},
+        widget::{Button, Row, Text},
         Element, Program,
     },
     IcedSettings,

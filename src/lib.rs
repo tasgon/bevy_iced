@@ -33,22 +33,27 @@
 
 use std::any::TypeId;
 use std::marker::PhantomData;
-use std::ops::Deref;
-use std::sync::{RwLock, Mutex};
+
+use std::sync::Mutex;
 use std::{cell::RefCell, sync::Arc};
 
 use crate::render::IcedNode;
 use crate::render::{IcedRenderData, ViewportResource};
-use bevy::prelude::{Component, Deref, DerefMut, NonSendMut, Res, ResMut, Resource, SystemSet};
+
+use bevy::ecs::all_tuples;
+use bevy::ecs::system::{
+    ReadOnlySystemParamFetch, SystemParam, SystemParamFetch, SystemParamItem, SystemState,
+};
+use bevy::prelude::{Deref, DerefMut, IntoSystem, NonSendMut, Res, Resource, System};
 use bevy::render::render_graph::RenderGraph;
 use bevy::render::RenderStage;
-use bevy::utils::{HashMap, HashSet};
+use bevy::time::Time;
+use bevy::utils::HashMap;
 use bevy::window::Windows;
 use bevy::{
-    prelude::{App, Commands, Plugin, World},
+    prelude::{App, Plugin, World},
     render::{
         renderer::{RenderContext, RenderDevice},
-        texture::BevyDefault,
         RenderApp,
     },
 };
@@ -92,13 +97,13 @@ type DrawFn = Box<dyn FnMut(&World, &mut RenderContext, &Viewport, &mut render::
 pub struct IcedContext {
     active: Option<TypeId>,
     update_fns: HashMap<TypeId, fn(&mut World)>,
-    draw_fns: HashMap<TypeId, fn(&World, &mut RenderContext, &mut render::IcedRenderData)>
+    draw_fns: HashMap<TypeId, fn(&World, &mut RenderContext, &mut render::IcedRenderData)>,
 }
 
 struct IcedProps {
     renderer: iced_wgpu::Renderer,
     debug: iced_native::Debug,
-    clipboard: iced_native::clipboard::Null
+    clipboard: iced_native::clipboard::Null,
 }
 
 #[derive(Resource, Deref, DerefMut)]
@@ -147,7 +152,7 @@ impl<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static> IcedP
                             y: (window.height() - p.y) * bounds.height / window.height(),
                         },
                     );
-                    
+
                     state.update(
                         bounds,
                         cursor_position,
@@ -165,9 +170,7 @@ impl<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static> IcedP
     }
 
     fn draw_fn(world: &World, ctx: &mut RenderContext, data: &mut render::IcedRenderData) {
-        let viewport = unsafe {
-            world.get_resource_unchecked_mut::<ViewportResource>()
-        }.unwrap();
+        let viewport = unsafe { world.get_resource_unchecked_mut::<ViewportResource>() }.unwrap();
         let IcedProps {
             ref mut renderer,
             ref mut debug,
@@ -201,7 +204,7 @@ fn create_state<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'st
         ..
     } = &mut *render_world.non_send_resource_mut::<_>();
 
-    let state = program::State::new(program, bounds, renderer, debug);
+    let _state = program::State::new(program, bounds, renderer, debug);
 }
 
 macro_rules! base_insert_proc {
@@ -276,11 +279,10 @@ macro_rules! base_insert_proc {
         );
 
         let draw_fn: DrawFn = Box::new(
-            move |world: &World,
+            move |_world: &World,
                   ctx: &mut RenderContext,
                   current_viewport: &Viewport,
                   data: &mut IcedRenderData| {
-
                 let IcedProgramData::<T> {
                     renderer,
                     debug,
@@ -338,4 +340,70 @@ pub(crate) fn setup_pipeline(graph: &mut RenderGraph) {
 unsafe fn get_rc_mut<'a, T>(rc: &'a Arc<T>) -> &'a mut T {
     let data = &**rc as *const T as *mut T;
     &mut *data
+}
+
+type Element<'a> = iced::Element<'a, (), iced_wgpu::Renderer>;
+struct BevyIcedProgram<F> {
+    world_ref: Option<*mut World>,
+    system: F,
+}
+
+pub trait ReadOnlySystem<In, Out>
+where
+    In: SystemParam + 'static,
+    In::Fetch: ReadOnlySystemParamFetch,
+{
+    fn process(&self, input: <In::Fetch as SystemParamFetch<'_, '_>>::Item) -> Out;
+
+    fn exec(&self, world: &mut World) -> Out {
+        let mut state = SystemState::<In>::new(world);
+        self.process(state.get(world))
+    }
+}
+
+macro_rules! read_only_system_impl {
+    ($($param: ident),*) => {
+        impl<Out, F, $($param: SystemParam + 'static,)*>
+            ReadOnlySystem<($($param,)*), Out> for F
+        where
+            $($param::Fetch: ReadOnlySystemParamFetch,)*
+            F: Fn($($param),*) -> Out +
+               Fn($(SystemParamItem<$param>),*) -> Out
+        {
+            fn process(
+                &self,
+                input: <<($($param,)*) as SystemParam>::Fetch as SystemParamFetch<'_, '_>>::Item,
+            ) -> Out {
+                let ($($param,)*) = input;
+                (self)($($param,)*)
+            }
+        }
+    };
+}
+all_tuples!(read_only_system_impl, 0, 16, P);
+
+pub trait ElementSystem<'a>: System<In = (), Out = Element<'a>> {}
+
+pub fn create<Params, F: for<'a> IntoSystem<(), Element<'a>, Params>>(f: F) -> impl std::any::Any {
+    let system = IntoSystem::into_system(f);
+    BevyIcedProgram {
+        world_ref: None,
+        system,
+    }
+}
+
+impl<F: for<'a> ElementSystem<'a>> Program for BevyIcedProgram<F> {
+    type Renderer = iced_wgpu::Renderer;
+
+    type Message = ();
+
+    fn update(&mut self, _message: Self::Message) -> iced::Command<Self::Message> {
+        todo!()
+    }
+
+    fn view(&self) -> iced::Element<'_, Self::Message, Self::Renderer> {
+        // let world = unsafe { &mut *self.world_ref.unwrap() };
+        // self.system.
+        todo!()
+    }
 }

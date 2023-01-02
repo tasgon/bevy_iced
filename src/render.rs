@@ -1,7 +1,7 @@
 use std::{cell::RefCell, sync::Mutex};
 
 use bevy::{
-    prelude::{Commands, Deref, DerefMut, NonSend, NonSendMut, Res, Resource},
+    prelude::{Commands, Deref, DerefMut, Res, Resource},
     render::{render_graph::Node, render_resource::TextureView, view::ExtractedWindows, Extract},
     window::Windows,
 };
@@ -11,7 +11,7 @@ use iced_wgpu::{
     Viewport,
 };
 
-use crate::{DrawFn};
+use crate::DrawFn;
 
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
 
