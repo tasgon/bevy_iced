@@ -45,7 +45,7 @@ use bevy::ecs::all_tuples;
 use bevy::ecs::system::{
     ReadOnlySystemParamFetch, SystemParam, SystemParamFetch, SystemParamItem, SystemState,
 };
-use bevy::prelude::{Deref, DerefMut, IntoSystem, NonSendMut, Res, ResMut, Resource, System};
+use bevy::prelude::{Deref, DerefMut, IntoSystem, NonSendMut, Res, ResMut, Resource, System, Events};
 use bevy::render::render_graph::RenderGraph;
 use bevy::render::RenderStage;
 use bevy::time::Time;
@@ -343,23 +343,7 @@ unsafe fn get_rc_mut<'a, T>(rc: &'a Arc<T>) -> &'a mut T {
     &mut *data
 }
 
-#[derive(Default)]
-pub struct TestEl<'a>(PhantomData<&'a String>);
 type Element<'a> = iced::Element<'a, (), iced_wgpu::Renderer>;
-// type Element<'a> = TestEl<'a>;
-
-pub trait ReadOnlySystem<In, Out>
-where
-    In: SystemParam + 'static,
-    In::Fetch: ReadOnlySystemParamFetch,
-{
-    fn process(&self, input: <In::Fetch as SystemParamFetch<'_, '_>>::Item) -> Out;
-
-    fn exec(&self, world: &mut World) -> Out {
-        let mut state = SystemState::<In>::new(world);
-        self.process(state.get(world))
-    }
-}
 
 trait Invoker<Params, Out> {
     fn invoke(&self, params: Params) -> Out;
@@ -380,41 +364,6 @@ macro_rules! invoker_impl {
 }
 all_tuples!(invoker_impl, 0, 16, P);
 
-// macro_rules! read_only_system_impl {
-//     ($($param: ident),*) => {
-//         impl<Out, F, $($param: SystemParam + 'static,)*>
-//             ReadOnlySystem<($($param,)*), Out> for F
-//         where
-//             $($param::Fetch: ReadOnlySystemParamFetch,)*
-//             F: Fn($($param),*) -> Out +
-//                Fn($(SystemParamItem<$param>),*) -> Out
-//         {
-//             fn process(
-//                 &self,
-//                 input: <<($($param,)*) as SystemParam>::Fetch as SystemParamFetch<'_, '_>>::Item,
-//             ) -> Out {
-//                 let ($($param,)*) = input;
-//                 (self)($($param,)*)
-//             }
-//         }
-//     };
-// }
-// all_tuples!(read_only_system_impl, 0, 16, P);
-
-// trait SystemStateExtractor<Params: SystemParam + 'static> {
-//     fn get_system_state(&self, world: &mut World) -> SystemState<Params>;
-// }
-
-// impl<A, Out, F> SystemStateExtractor<(A,)> for F
-// where
-//     A: SystemParam + 'static,
-//     F: Fn(A) -> Out + Fn(SystemParamItem<A>) -> Out
-// {
-//     fn get_system_state(&self, world: &mut World) -> SystemState<(A,)> {
-//         SystemState::new(world)
-//     }
-// }
-
 pub trait ElementProvider {
     type In: SystemParam + 'static;
 
@@ -423,17 +372,10 @@ pub trait ElementProvider {
     fn get_state(&self, world: &mut World) -> SystemState<Self::In> {
         SystemState::<Self::In>::new(world)
     }
-
-    // fn exec<'a>(&'a self, world: &'a mut World, state: &'a mut SystemState<Self::In>) -> Element<'a>
-    // where <<Self as ElementProvider>::In as SystemParam>::Fetch: ReadOnlySystemParamFetch
-    // {
-    //     let params = state.get(world);
-    //     self.process(params)
-    // }
 }
 
 fn thonk<Params: SystemParam + 'static, Out, F: Invoker<Params, Out>>(
-    f: F,
+    f: &F,
     world: &mut World,
 ) -> SystemState<Params> {
     let state = SystemState::<Params>::new(world);
@@ -452,48 +394,16 @@ where
     f.invoke(params)
 }
 
-// pub trait Helper<A, B>: Fn(A) -> B {}
-// impl<A, B, T> Helper<A, B> for T where T: Fn(A) -> B {}
-// impl<F> ElementProvider<(A,)> for F
-// where
-//     F: for<'a> Helper<SystemParamItem<'a, 'a, A>, Element<'a>>,
-//     A::Fetch: ReadOnlySystemParamFetch
-// {
-//     fn process<'a>(&self, input: <<(A,) as SystemParam>::Fetch as SystemParamFetch<'a, 'a>>::Item) -> Element<'a> {
-//         let (a,) = input;
-//         (self)(a)
-//     }
-// }
-
-fn els(time: Res<Time>) -> Element {
-    iced_native::widget::text("Hello!").into()
-}
-
-// fn b() -> impl for<'a> ElementProvider<(Res<'a, Time>,)> {
-//     els
-// }
-
-fn test(world: &mut World) {
-    let mut state = thonk(els, world);
-    let data = doomer(&els, world, &mut state);
+pub struct Ctx {
+    prog: Box<dyn BevyIcedProcessor>
 }
 
 struct BevyIcedProgram<F, P: SystemParam + 'static> {
-    world_ref: Option<*mut World>,
+    world_ref: Option<*const World>,
     system_state: Option<UnsafeCell<SystemState<P>>>,
     system: F,
     _p: PhantomData<P>
 }
-
-// pub fn create(
-//     system: impl for<'a> Fn(&'a World) -> Element<'a>,
-// ) -> impl Program<Renderer = iced_wgpu::Renderer, Message = ()>
-// {
-//     BevyIcedProgram {
-//         world_ref: None,
-//         system
-//     }
-// }
 
 impl<Params: SystemParam + 'static, F: for<'a> Invoker<<Params::Fetch as SystemParamFetch<'a, 'a>>::Item, Element<'a>>> BevyIcedProgram<F, Params>
 where Params::Fetch: ReadOnlySystemParamFetch
@@ -506,6 +416,14 @@ where Params::Fetch: ReadOnlySystemParamFetch
             _p: Default::default(),
         }
     }
+
+    pub fn update(&mut self, world: &mut World) {
+        let world_ptr = world as *const World;
+        if self.world_ref.map(|x| x == world_ptr).unwrap_or(false) {
+            self.world_ref = Some(world_ptr);
+            self.system_state = Some(UnsafeCell::new(SystemState::<Params>::new(world)))
+        }
+    }
 }
 
 impl<Params: SystemParam + 'static, F: for<'a> Invoker<<Params::Fetch as SystemParamFetch<'a, 'a>>::Item, Element<'a>>> Program for BevyIcedProgram<F, Params>
@@ -514,13 +432,32 @@ where Params::Fetch: ReadOnlySystemParamFetch
     type Renderer = iced_wgpu::Renderer;
     type Message = ();
 
-    fn update(&mut self, _message: Self::Message) -> iced::Command<Self::Message> {
-        todo!()
+    fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
+        let world = unsafe { &mut *(self.world_ref.unwrap() as *mut World) };
+        let mut events = world.resource_mut::<Events<Self::Message>>();
+        events.send(message);
+        iced::Command::none()
     }
 
     fn view(&self) -> iced::Element<'_, Self::Message, Self::Renderer> {
         let world = unsafe { &*self.world_ref.unwrap() };
         let state = self.system_state.as_ref().map(|x| unsafe { &mut *x.get() }).unwrap();
-        doomer(&self.system, world, state)
+        let params = state.get(world);
+        self.system.invoke(params)
+    }
+}
+
+trait BevyIcedProcessor {
+    fn update(&mut self);
+    fn render(&self);
+}
+
+impl<F, P: SystemParam + 'static> BevyIcedProcessor for program::State<BevyIcedProgram<F, P>> where BevyIcedProgram<F, P>: Program {
+    fn update(&mut self) {
+        todo!()
+    }
+
+    fn render(&self) {
+        todo!()
     }
 }
