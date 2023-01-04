@@ -1,4 +1,5 @@
-use bevy::prelude::KeyCode as BevyKeyCode;
+use bevy_input::prelude::KeyCode as BevyKeyCode;
+use bevy_input::prelude::MouseButton;
 use iced_native::keyboard::KeyCode as IcedKeyCode;
 
 pub fn key_code(virtual_keycode: BevyKeyCode) -> IcedKeyCode {
@@ -169,12 +170,12 @@ pub fn key_code(virtual_keycode: BevyKeyCode) -> IcedKeyCode {
     }
 }
 
-pub fn mouse_button(button: bevy::input::mouse::MouseButton) -> iced_native::mouse::Button {
+pub fn mouse_button(button: MouseButton) -> iced_native::mouse::Button {
     use iced_native::mouse::Button;
     match button {
-        bevy::prelude::MouseButton::Left => Button::Left,
-        bevy::prelude::MouseButton::Right => Button::Right,
-        bevy::prelude::MouseButton::Middle => Button::Middle,
-        bevy::prelude::MouseButton::Other(val) => Button::Other(val as u8),
+        MouseButton::Left => Button::Left,
+        MouseButton::Right => Button::Right,
+        MouseButton::Middle => Button::Middle,
+        MouseButton::Other(val) => Button::Other(val as u8),
     }
 }

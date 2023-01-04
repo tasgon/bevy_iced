@@ -36,19 +36,15 @@ use std::sync::Mutex;
 use crate::render::IcedNode;
 use crate::render::ViewportResource;
 
-use bevy::ecs::event::Event;
-use bevy::ecs::system::SystemParam;
-use bevy::prelude::{EventWriter, NonSendMut, Res, ResMut, Resource};
-use bevy::render::render_graph::RenderGraph;
-use bevy::render::RenderStage;
-
-use bevy::utils::HashMap;
-use bevy::window::Windows;
-use bevy::{
-    prelude::{App, Plugin},
-    render::{renderer::RenderDevice, RenderApp},
-};
-
+use bevy_app::{Plugin, App};
+use bevy_ecs::event::Event;
+use bevy_ecs::prelude::EventWriter;
+use bevy_ecs::system::{Resource, Res, SystemParam, ResMut, NonSendMut};
+use bevy_render::render_graph::RenderGraph;
+use bevy_render::renderer::RenderDevice;
+use bevy_render::{RenderApp, RenderStage};
+use bevy_utils::HashMap;
+use bevy_window::Windows;
 use iced::{user_interface, UserInterface, Element};
 pub use iced_native as iced;
 use iced_native::{Debug, Size};
@@ -141,7 +137,7 @@ pub(crate) fn setup_pipeline(graph: &mut RenderGraph) {
 
     graph
         .add_node_edge(
-            bevy::render::main_graph::node::CAMERA_DRIVER,
+            bevy_render::main_graph::node::CAMERA_DRIVER,
             render::ICED_PASS,
         )
         .unwrap();

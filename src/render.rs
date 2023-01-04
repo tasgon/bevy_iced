@@ -1,10 +1,8 @@
 use std::sync::Mutex;
-
-use bevy::{
-    prelude::{Commands, Deref, DerefMut, Res, Resource},
-    render::{render_graph::Node, view::ExtractedWindows, Extract},
-    window::Windows,
-};
+use bevy_derive::{Deref, DerefMut};
+use bevy_ecs::{system::{Resource, Res, Commands}, world::World};
+use bevy_render::{Extract, render_graph::{Node, RenderGraphContext, NodeRunError}, renderer::RenderContext, view::ExtractedWindows};
+use bevy_window::Windows;
 use iced_native::Size;
 use iced_wgpu::{wgpu::util::StagingBelt, Viewport};
 
@@ -57,16 +55,16 @@ impl IcedNode {
 }
 
 impl Node for IcedNode {
-    fn update(&mut self, _world: &mut bevy::prelude::World) {
+    fn update(&mut self, _world: &mut World) {
         self.staging_belt.lock().unwrap().recall()
     }
 
     fn run(
         &self,
-        _graph: &mut bevy::render::render_graph::RenderGraphContext,
-        render_context: &mut bevy::render::renderer::RenderContext,
-        world: &bevy::prelude::World,
-    ) -> Result<(), bevy::render::render_graph::NodeRunError> {
+        _graph: &mut RenderGraphContext,
+        render_context: &mut RenderContext,
+        world: &World,
+    ) -> Result<(), NodeRunError> {
         let Some(extracted_window) = world
             .get_resource::<ExtractedWindows>()
             .unwrap()
