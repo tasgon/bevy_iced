@@ -1,6 +1,6 @@
 [package]
 name = "bevy_iced"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "Iced integration for Bevy"
 authors = ["tasgon <tasgon_@outlook.com>"]
@@ -19,4 +19,3 @@ iced_native = "0.7"
 
 [dev-dependencies]
 rand = "0.8"
-bevy-inspector-egui = "0.15"

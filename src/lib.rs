@@ -2,71 +2,56 @@
 //!
 //! ```no_run
 //! use bevy::prelude::*;
-//! use bevy_iced::{
-//!     IcedAppExtensions, IcedPlugin,
-//!     iced::{Program, program::State}
-//! };
-//!
-//! #[derive(Default)]
-//! pub struct Ui {
-//!     // Set up your UI state
-//! }
-//!
-//! impl Program for Ui {
-//!     // Set up your program logic
-//! }
-//!
+//! use bevy_iced::iced::widget::text;
+//! use bevy_iced::{IcedContext, IcedPlugin};
+//! 
+//! #[derive(Debug)]
+//! pub enum UiMessage {}
+//! 
 //! pub fn main() {
 //!     App::new()
 //!         .add_plugins(DefaultPlugins)
 //!         .add_plugin(IcedPlugin)
-//!         .insert_program(Ui::default())
+//!         .add_event::<UiMessage>()
 //!         .add_system(ui_system)
 //!         .run();
 //! }
-//!
-//! pub fn ui_system(mut ui_state: NonSendMut<State<Ui>>, /* ... */) {
-//!     // Do some work here, then modify your ui state by running
-//!     // ui_state.queue_message(..);
+//! 
+//! fn ui_system(time: Res<Time>, mut ctx: IcedContext<UiMessage>) {
+//!     ctx.show(text(format!(
+//!         "Hello Iced! Running for {:.2} seconds.",
+//!         time.elapsed_seconds()
+//!     )));
 //! }
 //! ```
 
-use std::any::{TypeId, Any};
-use std::cell::RefCell;
-use std::marker::PhantomData;
-use std::ops::DerefMut;
+#![deny(unsafe_code)]
+#![deny(missing_docs)]
+
+use std::any::{Any, TypeId};
+
+use std::sync::Arc;
 use std::sync::Mutex;
-use std::{sync::Arc};
 
 use crate::render::IcedNode;
-use crate::render::{ViewportResource};
-
+use crate::render::ViewportResource;
 
 use bevy::ecs::event::Event;
-use bevy::ecs::system::{
-    SystemParam,
-};
-use bevy::prelude::{
-    EventWriter, Res, ResMut,
-    Resource, NonSendMut,
-};
+use bevy::ecs::system::SystemParam;
+use bevy::prelude::{EventWriter, NonSendMut, Res, ResMut, Resource};
 use bevy::render::render_graph::RenderGraph;
 use bevy::render::RenderStage;
-
 
 use bevy::utils::HashMap;
 use bevy::window::Windows;
 use bevy::{
     prelude::{App, Plugin},
-    render::{
-        renderer::{RenderDevice},
-        RenderApp,
-    },
+    render::{renderer::RenderDevice, RenderApp},
 };
 
-use iced::{user_interface, UserInterface};
+use iced::{user_interface, UserInterface, Element};
 pub use iced_native as iced;
-use iced_native::{Debug, Program, Size};
+use iced_native::{Debug, Size};
 pub use iced_wgpu;
 use iced_wgpu::{wgpu, Viewport};
 
@@ -95,19 +80,19 @@ impl Plugin for IcedPlugin {
             .insert_resource(default_viewport.clone());
 
         let render_app = app.sub_app_mut(RenderApp);
-        render_app.insert_resource(default_viewport);
-        render_app.insert_resource(iced_resource);
-        render_app.add_system_to_stage(RenderStage::Extract, render::extract_iced_data);
-        // render_app.init_resource::<render::IcedPipeline>();
+        render_app
+            .insert_resource(default_viewport)
+            .insert_resource(iced_resource)
+            .add_system_to_stage(RenderStage::Extract, render::extract_iced_data);
         setup_pipeline(&mut render_app.world.get_resource_mut().unwrap());
     }
 }
-
 
 struct IcedProps {
     renderer: iced_wgpu::Renderer,
     debug: iced_native::Debug,
     clipboard: iced_native::clipboard::Null,
+    did_draw: bool,
 }
 
 impl IcedProps {
@@ -128,10 +113,14 @@ impl IcedProps {
             )),
             debug: Debug::new(),
             clipboard: iced_native::clipboard::Null,
+            did_draw: false,
         }
     }
 }
 
+// This (and IcedCache) shouldn't be `pub` at all, but IcedContext can't be a `SystemParam`
+// otherwise (until https://github.com/bevyengine/bevy/issues/4200 gets resolved).
+#[doc(hidden)]
 #[derive(Resource, Clone)]
 pub struct IcedResource(Arc<Mutex<IcedProps>>);
 
@@ -158,6 +147,7 @@ pub(crate) fn setup_pipeline(graph: &mut RenderGraph) {
         .unwrap();
 }
 
+#[doc(hidden)]
 #[derive(Default)]
 pub struct IcedCache {
     pub(crate) cache: HashMap<TypeId, Option<user_interface::Cache>>,
@@ -173,8 +163,15 @@ impl IcedCache {
     }
 }
 
+/// The context for interacting with Iced. Add this as a parameter to your system.
+/// ```no_run
+/// fn ui_system(..., mut ctx: IcedContext<UiMessage>) {
+///     let element = ...; // Build your element
+///     ctx.show(element);
+/// }
+/// ```
 #[derive(SystemParam)]
-pub struct Context<'w, 's, Message: Event> {
+pub struct IcedContext<'w, 's, Message: Event> {
     viewport: Res<'w, ViewportResource>,
     props: Res<'w, IcedResource>,
     windows: Res<'w, Windows>,
@@ -183,15 +180,17 @@ pub struct Context<'w, 's, Message: Event> {
     messages: EventWriter<'w, 's, Message>,
 }
 
-impl<'w, 's, M: Event + std::fmt::Debug> Context<'w, 's, M> {
+impl<'w, 's, M: Event + std::fmt::Debug> IcedContext<'w, 's, M> {
+    /// Display an [`Element`] to the screen.
     pub fn show<'a>(
         &'a mut self,
-        element: impl Into<iced_native::Element<'a, M, iced_wgpu::Renderer>>,
+        element: impl Into<Element<'a, M, iced_wgpu::Renderer>>,
     ) {
         let IcedProps {
             ref mut renderer,
-            debug: _,
             ref mut clipboard,
+            ref mut did_draw,
+            ..
         } = &mut *self.props.lock().unwrap();
         let bounds = self.viewport.logical_size();
 
@@ -228,11 +227,12 @@ impl<'w, 's, M: Event + std::fmt::Debug> Context<'w, 's, M> {
             text_color: iced_native::Color::WHITE,
         };
 
-        // println!("count: {}", messages.len());
         messages.into_iter().for_each(|msg| self.messages.send(msg));
 
         ui.draw(renderer, &theme, &style, cursor_position);
 
+        self.events.clear();
         *cache_entry = Some(ui.into_cache());
+        *did_draw = true;
     }
 }

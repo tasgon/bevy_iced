@@ -1,4 +1,4 @@
-use std::{sync::Mutex};
+use std::sync::Mutex;
 
 use bevy::{
     prelude::{Commands, Deref, DerefMut, Res, Resource},
@@ -6,12 +6,9 @@ use bevy::{
     window::Windows,
 };
 use iced_native::Size;
-use iced_wgpu::{
-    wgpu::{util::StagingBelt},
-    Viewport,
-};
+use iced_wgpu::{wgpu::util::StagingBelt, Viewport};
 
-use crate::{IcedResource, IcedProps};
+use crate::{IcedProps, IcedResource};
 
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
 
@@ -76,14 +73,21 @@ impl Node for IcedNode {
             .windows
             .values()
             .next() else { return Ok(()) };
+
+        let IcedProps {
+            renderer,
+            debug,
+            did_draw,
+            ..
+        } = &mut *world.resource::<IcedResource>().lock().unwrap();
+
+        if !*did_draw {
+            return Ok(());
+        }
+
         let view = extracted_window.swap_chain_texture.as_ref().unwrap();
         let staging_belt = &mut *self.staging_belt.lock().unwrap();
 
-        let IcedProps {
-            ref mut renderer,
-            ref mut debug,
-            ..
-        } = &mut *world.resource::<IcedResource>().lock().unwrap();
         let viewport = &*world.resource::<ViewportResource>();
         let device = render_context.render_device.wgpu_device();
         renderer.with_primitives(|backend, primitives| {
@@ -99,6 +103,7 @@ impl Node for IcedNode {
         });
 
         staging_belt.finish();
+        *did_draw = false;
 
         Ok(())
     }
