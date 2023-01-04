@@ -58,7 +58,7 @@ mod systems;
 use systems::IcedEventQueue;
 
 /// The main feature of `bevy_iced`.
-/// Add this to your [`App`](`bevy::prelude::App`) by calling `app.add_plugin(bevy_iced::IcedPlugin)`.
+/// Add this to your [`App`] by calling `app.add_plugin(bevy_iced::IcedPlugin)`.
 pub struct IcedPlugin;
 
 impl Plugin for IcedPlugin {
@@ -198,7 +198,7 @@ impl Default for IcedSettings {
 /// }
 /// ```
 /// 
-/// IcedContext<T> requires an event system to be defined in the [`App`].
+/// `IcedContext<T>` requires an event system to be defined in the [`App`].
 /// Do so by invoking `app.add_event::<T>()` when constructing your App.
 #[derive(SystemParam)]
 pub struct IcedContext<'w, 's, Message: Event> {
