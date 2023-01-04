@@ -11,7 +11,7 @@ use iced_wgpu::{
     Viewport,
 };
 
-use crate::{DrawFn, IcedResource, IcedProps};
+use crate::{IcedResource, IcedProps};
 
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
 
@@ -45,11 +45,6 @@ pub(crate) fn update_viewport(
 
 pub(crate) fn extract_iced_data(mut commands: Commands, viewport: Extract<Res<ViewportResource>>) {
     commands.insert_resource(viewport.clone());
-}
-
-pub struct IcedRenderData<'a> {
-    pub view: &'a TextureView,
-    pub staging_belt: &'a mut wgpu::util::StagingBelt,
 }
 
 pub struct IcedNode {
