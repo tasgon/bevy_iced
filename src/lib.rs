@@ -4,10 +4,10 @@
 //! use bevy::prelude::*;
 //! use bevy_iced::iced::widget::text;
 //! use bevy_iced::{IcedContext, IcedPlugin};
-//! 
+//!
 //! #[derive(Debug)]
 //! pub enum UiMessage {}
-//! 
+//!
 //! pub fn main() {
 //!     App::new()
 //!         .add_plugins(DefaultPlugins)
@@ -16,9 +16,9 @@
 //!         .add_system(ui_system)
 //!         .run();
 //! }
-//! 
+//!
 //! fn ui_system(time: Res<Time>, mut ctx: IcedContext<UiMessage>) {
-//!     ctx.show(text(format!(
+//!     ctx.display(text(format!(
 //!         "Hello Iced! Running for {:.2} seconds.",
 //!         time.elapsed_seconds()
 //!     )));
@@ -36,16 +36,16 @@ use std::sync::Mutex;
 use crate::render::IcedNode;
 use crate::render::ViewportResource;
 
-use bevy_app::{Plugin, App};
+use bevy_app::{App, Plugin};
 use bevy_ecs::event::Event;
 use bevy_ecs::prelude::EventWriter;
-use bevy_ecs::system::{Resource, Res, SystemParam, ResMut, NonSendMut};
+use bevy_ecs::system::{NonSendMut, Res, ResMut, Resource, SystemParam};
 use bevy_render::render_graph::RenderGraph;
 use bevy_render::renderer::RenderDevice;
 use bevy_render::{RenderApp, RenderStage};
 use bevy_utils::HashMap;
 use bevy_window::Windows;
-use iced::{user_interface, UserInterface, Element};
+use iced::{user_interface, Element, UserInterface};
 pub use iced_native as iced;
 use iced_native::{Debug, Size};
 pub use iced_wgpu;
@@ -194,10 +194,10 @@ impl Default for IcedSettings {
 /// ```no_run
 /// fn ui_system(..., mut ctx: IcedContext<UiMessage>) {
 ///     let element = ...; // Build your element
-///     ctx.show(element);
+///     ctx.display(element);
 /// }
 /// ```
-/// 
+///
 /// `IcedContext<T>` requires an event system to be defined in the [`App`].
 /// Do so by invoking `app.add_event::<T>()` when constructing your App.
 #[derive(SystemParam)]
@@ -213,10 +213,7 @@ pub struct IcedContext<'w, 's, Message: Event> {
 
 impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
     /// Display an [`Element`] to the screen.
-    pub fn display<'a>(
-        &'a mut self,
-        element: impl Into<Element<'a, M, iced_wgpu::Renderer>>,
-    ) {
+    pub fn display<'a>(&'a mut self, element: impl Into<Element<'a, M, iced_wgpu::Renderer>>) {
         let IcedProps {
             ref mut renderer,
             ref mut clipboard,
@@ -255,7 +252,12 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
 
         messages.into_iter().for_each(|msg| self.messages.send(msg));
 
-        ui.draw(renderer, &self.settings.theme, &self.settings.style, cursor_position);
+        ui.draw(
+            renderer,
+            &self.settings.theme,
+            &self.settings.style,
+            cursor_position,
+        );
 
         self.events.clear();
         *cache_entry = Some(ui.into_cache());

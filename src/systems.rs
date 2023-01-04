@@ -1,7 +1,14 @@
 use crate::conversions;
 use bevy_derive::{Deref, DerefMut};
-use bevy_ecs::{system::{Resource, SystemParam, ResMut}, prelude::EventReader};
-use bevy_input::{mouse::{MouseButtonInput, MouseWheel}, keyboard::KeyboardInput, ButtonState};
+use bevy_ecs::{
+    prelude::EventReader,
+    system::{ResMut, Resource, SystemParam},
+};
+use bevy_input::{
+    keyboard::KeyboardInput,
+    mouse::{MouseButtonInput, MouseWheel},
+    ButtonState,
+};
 use bevy_window::{CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter};
 use iced_native::{keyboard, mouse, Event as IcedEvent, Point};
 

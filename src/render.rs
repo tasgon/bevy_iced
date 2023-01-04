@@ -1,10 +1,18 @@
-use std::sync::Mutex;
 use bevy_derive::{Deref, DerefMut};
-use bevy_ecs::{system::{Resource, Res, Commands}, world::World};
-use bevy_render::{Extract, render_graph::{Node, RenderGraphContext, NodeRunError}, renderer::RenderContext, view::ExtractedWindows};
+use bevy_ecs::{
+    system::{Commands, Res, Resource},
+    world::World,
+};
+use bevy_render::{
+    render_graph::{Node, NodeRunError, RenderGraphContext},
+    renderer::RenderContext,
+    view::ExtractedWindows,
+    Extract,
+};
 use bevy_window::Windows;
 use iced_native::Size;
 use iced_wgpu::{wgpu::util::StagingBelt, Viewport};
+use std::sync::Mutex;
 
 use crate::{IcedProps, IcedResource, IcedSettings};
 

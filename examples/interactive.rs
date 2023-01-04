@@ -4,8 +4,8 @@ use bevy::{
     prelude::*,
 };
 use bevy_iced::{
-    iced::widget::{Button, Row, slider, text, Column},
-    IcedContext, IcedPlugin, IcedSettings, 
+    iced::widget::{slider, text, Button, Column, Row},
+    IcedContext, IcedPlugin, IcedSettings,
 };
 
 use rand::random as rng;
@@ -97,7 +97,8 @@ fn update_scale_factor(
         return;
     }
     for event in wheel.iter() {
-        let scale_factor = (iced_settings.scale_factor.unwrap_or(1.0) + (event.y / 10.0) as f64).max(1.0);
+        let scale_factor =
+            (iced_settings.scale_factor.unwrap_or(1.0) + (event.y / 10.0) as f64).max(1.0);
         iced_settings.set_scale_factor(scale_factor);
     }
 }
@@ -124,7 +125,11 @@ fn ui_system(
         .spacing(10)
         .align_items(iced_native::Alignment::Center)
         .push(Button::new(text("Request box")).on_press(UiMessage::BoxRequested))
-        .push(text(format!("{} boxes (amplitude: {})", sprites.iter().len(), **scale)));
+        .push(text(format!(
+            "{} boxes (amplitude: {})",
+            sprites.iter().len(),
+            **scale
+        )));
     let column = Column::new()
         .align_items(iced_native::Alignment::Center)
         .spacing(10)
