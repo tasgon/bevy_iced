@@ -6,31 +6,20 @@ use bevy_window::Windows;
 use iced_native::Size;
 use iced_wgpu::{wgpu::util::StagingBelt, Viewport};
 
-use crate::{IcedProps, IcedResource};
+use crate::{IcedProps, IcedResource, IcedSettings};
 
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
-
-/// Settings used to independently customize Iced rendering.
-#[derive(Clone, Resource)]
-pub struct IcedSettings {
-    /// The scale factor to use for rendering Iced windows.
-    pub scale_factor: f64,
-}
 
 #[derive(Resource, Deref, DerefMut, Clone)]
 pub struct ViewportResource(pub Viewport);
 
 pub(crate) fn update_viewport(
     windows: Res<Windows>,
-    iced_settings: Option<Res<IcedSettings>>,
+    iced_settings: Res<IcedSettings>,
     mut commands: Commands,
 ) {
     let window = windows.get_primary().unwrap();
-    let scale_factor = if let Some(settings) = iced_settings {
-        settings.scale_factor
-    } else {
-        window.scale_factor()
-    };
+    let scale_factor = iced_settings.scale_factor.unwrap_or(window.scale_factor());
     let viewport = Viewport::with_physical_size(
         Size::new(window.physical_width(), window.physical_height()),
         scale_factor,

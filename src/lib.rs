@@ -55,7 +55,6 @@ mod conversions;
 mod render;
 mod systems;
 
-pub use render::IcedSettings;
 use systems::IcedEventQueue;
 
 /// The main feature of `bevy_iced`.
@@ -71,6 +70,7 @@ impl Plugin for IcedPlugin {
         app.add_system(systems::process_input)
             .add_system(render::update_viewport)
             .insert_resource(iced_resource.clone())
+            .insert_resource(IcedSettings::default())
             .insert_non_send_resource(IcedCache::default())
             .insert_resource(IcedEventQueue::default())
             .insert_resource(default_viewport.clone());
@@ -132,7 +132,7 @@ impl From<IcedProps> for IcedResource {
     }
 }
 
-pub(crate) fn setup_pipeline(graph: &mut RenderGraph) {
+fn setup_pipeline(graph: &mut RenderGraph) {
     graph.add_node(render::ICED_PASS, IcedNode::new());
 
     graph
@@ -146,7 +146,7 @@ pub(crate) fn setup_pipeline(graph: &mut RenderGraph) {
 #[doc(hidden)]
 #[derive(Default)]
 pub struct IcedCache {
-    pub(crate) cache: HashMap<TypeId, Option<user_interface::Cache>>,
+    cache: HashMap<TypeId, Option<user_interface::Cache>>,
 }
 
 impl IcedCache {
@@ -159,6 +159,37 @@ impl IcedCache {
     }
 }
 
+/// Settings used to independently customize Iced rendering.
+#[derive(Clone, Resource)]
+pub struct IcedSettings {
+    /// The scale factor to use for rendering Iced elements.
+    /// Setting this to `None` defaults to using the `Window`s scale factor.
+    pub scale_factor: Option<f64>,
+    /// The theme to use for rendering Iced elements.
+    pub theme: iced_wgpu::Theme,
+    /// The style to use for rendering Iced elements.
+    pub style: iced_native::renderer::Style,
+}
+
+impl IcedSettings {
+    /// Set the `scale_factor` used to render Iced elements.
+    pub fn set_scale_factor(&mut self, factor: impl Into<Option<f64>>) {
+        self.scale_factor = factor.into();
+    }
+}
+
+impl Default for IcedSettings {
+    fn default() -> Self {
+        Self {
+            scale_factor: None,
+            theme: iced_wgpu::Theme::Dark,
+            style: iced_native::renderer::Style {
+                text_color: iced_native::Color::WHITE,
+            },
+        }
+    }
+}
+
 /// The context for interacting with Iced. Add this as a parameter to your system.
 /// ```no_run
 /// fn ui_system(..., mut ctx: IcedContext<UiMessage>) {
@@ -166,17 +197,21 @@ impl IcedCache {
 ///     ctx.show(element);
 /// }
 /// ```
+/// 
+/// IcedContext<T> requires an event system to be defined in the [`App`].
+/// Do so by invoking `app.add_event::<T>()` when constructing your App.
 #[derive(SystemParam)]
 pub struct IcedContext<'w, 's, Message: Event> {
     viewport: Res<'w, ViewportResource>,
     props: Res<'w, IcedResource>,
+    settings: Res<'w, IcedSettings>,
     windows: Res<'w, Windows>,
     events: ResMut<'w, IcedEventQueue>,
     cache_map: NonSendMut<'w, IcedCache>,
     messages: EventWriter<'w, 's, Message>,
 }
 
-impl<'w, 's, M: Event + std::fmt::Debug> IcedContext<'w, 's, M> {
+impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
     /// Display an [`Element`] to the screen.
     pub fn show<'a>(
         &'a mut self,
@@ -218,14 +253,9 @@ impl<'w, 's, M: Event + std::fmt::Debug> IcedContext<'w, 's, M> {
             &mut messages,
         );
 
-        let theme = iced_wgpu::Theme::Dark;
-        let style = iced_native::renderer::Style {
-            text_color: iced_native::Color::WHITE,
-        };
-
         messages.into_iter().for_each(|msg| self.messages.send(msg));
 
-        ui.draw(renderer, &theme, &style, cursor_position);
+        ui.draw(renderer, &self.settings.theme, &self.settings.style, cursor_position);
 
         self.events.clear();
         *cache_entry = Some(ui.into_cache());

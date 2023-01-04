@@ -32,6 +32,13 @@ fn ui_system(time: Res<Time>, mut ctx: IcedContext<UiMessage>) {
 
 See the [examples](https://github.com/tasgon/bevy_iced/tree/master/examples) and the [documentation](https://docs.rs/bevy_iced) for more details on how to use the crate.
 
+## Compatibility
+
+|Bevy Version  |Crate Version  |
+|--------------|---------------|
+|`0.9`         |`0.2`, `main`  |
+|`0.7`         |`0.1`          |
+
 ## Todo
 
 - Multi-window support

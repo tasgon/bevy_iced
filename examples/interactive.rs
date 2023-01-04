@@ -24,13 +24,26 @@ pub struct BoxScale(f32);
 
 pub fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                present_mode: bevy_window::PresentMode::AutoNoVsync,
+                ..Default::default()
+            },
+            ..Default::default()
+        }))
         .add_plugin(IcedPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_event::<UiMessage>()
         .insert_resource(UiActive(true))
         .insert_resource(BoxScale(50.0))
+        .insert_resource(IcedSettings {
+            scale_factor: None,
+            theme: bevy_iced::iced_wgpu::Theme::Light,
+            style: bevy_iced::iced::renderer::Style {
+                text_color: bevy_iced::iced::Color::from_rgb(0.0, 1.0, 1.0),
+            },
+        })
         .add_startup_system(build_program)
         .add_system(tick)
         .add_system(box_system)
@@ -77,29 +90,22 @@ fn box_system(
 }
 
 fn update_scale_factor(
-    mut commands: Commands,
-    windows: Res<Windows>,
     mut wheel: EventReader<MouseWheel>,
-    iced_settings: Option<ResMut<IcedSettings>>,
+    mut iced_settings: ResMut<IcedSettings>,
 ) {
     if wheel.is_empty() {
         return;
     }
-    if let Some(mut settings) = iced_settings {
-        for event in wheel.iter() {
-            settings.scale_factor = (settings.scale_factor + (event.y / 10.0) as f64).max(1.0);
-        }
-    } else {
-        commands.insert_resource(IcedSettings {
-            scale_factor: windows.primary().scale_factor(),
-        });
+    for event in wheel.iter() {
+        let scale_factor = (iced_settings.scale_factor.unwrap_or(1.0) + (event.y / 10.0) as f64).max(1.0);
+        iced_settings.set_scale_factor(scale_factor);
     }
 }
 
 fn toggle_ui(mut buttons: EventReader<MouseButtonInput>, mut ui_active: ResMut<UiActive>) {
     for ev in buttons.iter() {
         if ev.button == MouseButton::Right {
-            ui_active.0 = !ui_active.0;
+            **ui_active = !**ui_active;
         }
     }
 }
