@@ -1,13 +1,13 @@
-use std::{cell::RefCell, sync::Mutex};
+use std::{sync::Mutex};
 
 use bevy::{
     prelude::{Commands, Deref, DerefMut, Res, Resource},
-    render::{render_graph::Node, render_resource::TextureView, view::ExtractedWindows, Extract},
+    render::{render_graph::Node, view::ExtractedWindows, Extract},
     window::Windows,
 };
 use iced_native::Size;
 use iced_wgpu::{
-    wgpu::{self, util::StagingBelt},
+    wgpu::{util::StagingBelt},
     Viewport,
 };
 

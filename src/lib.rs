@@ -31,38 +31,39 @@
 //! }
 //! ```
 
-use std::any::TypeId;
-use std::cell::UnsafeCell;
+use std::any::{TypeId, Any};
+use std::cell::RefCell;
 use std::marker::PhantomData;
-
+use std::ops::DerefMut;
 use std::sync::Mutex;
-use std::{cell::RefCell, sync::Arc};
+use std::{sync::Arc};
 
 use crate::render::IcedNode;
 use crate::render::{ViewportResource};
 
-use bevy::ecs::all_tuples;
+
 use bevy::ecs::event::Event;
 use bevy::ecs::system::{
-    ReadOnlySystemParamFetch, SystemParam, SystemParamFetch, SystemParamItem, SystemState,
+    SystemParam,
 };
 use bevy::prelude::{
-    Deref, DerefMut, EventWriter, Events, IntoPipeSystem, IntoSystem, NonSendMut, Res, ResMut,
-    Resource, System, EventReader,
+    EventWriter, Res, ResMut,
+    Resource, NonSendMut,
 };
 use bevy::render::render_graph::RenderGraph;
 use bevy::render::RenderStage;
-use bevy::time::Time;
+
+
 use bevy::utils::HashMap;
 use bevy::window::Windows;
 use bevy::{
-    prelude::{App, Plugin, World},
+    prelude::{App, Plugin},
     render::{
-        renderer::{RenderContext, RenderDevice},
+        renderer::{RenderDevice},
         RenderApp,
     },
 };
-use iced::widget::pane_grid;
+
 use iced::{user_interface, UserInterface};
 pub use iced_native as iced;
 use iced_native::{Debug, Program, Size};
@@ -89,6 +90,7 @@ impl Plugin for IcedPlugin {
         app.add_system(systems::process_input)
             .add_system(render::update_viewport)
             .insert_resource(iced_resource.clone())
+            .insert_non_send_resource(IcedCache::default())
             .insert_resource(IcedEventQueue::default())
             .insert_resource(default_viewport.clone());
 
@@ -145,12 +147,6 @@ impl From<IcedProps> for IcedResource {
     }
 }
 
-struct IcedProgramData<T> {
-    renderer: iced_wgpu::Renderer,
-    debug: iced_native::Debug,
-    _phantom: PhantomData<T>,
-}
-
 pub(crate) fn setup_pipeline(graph: &mut RenderGraph) {
     graph.add_node(render::ICED_PASS, IcedNode::new());
 
@@ -162,7 +158,20 @@ pub(crate) fn setup_pipeline(graph: &mut RenderGraph) {
         .unwrap();
 }
 
-type Element<'a> = iced::Element<'a, (), iced_wgpu::Renderer>;
+#[derive(Default)]
+pub struct IcedCache {
+    pub(crate) cache: HashMap<TypeId, Option<user_interface::Cache>>,
+}
+
+impl IcedCache {
+    fn get<M: Any>(&mut self) -> &mut Option<user_interface::Cache> {
+        let id = TypeId::of::<M>();
+        if !self.cache.contains_key(&id) {
+            self.cache.insert(id, Some(Default::default()));
+        }
+        self.cache.get_mut(&id).unwrap()
+    }
+}
 
 #[derive(SystemParam)]
 pub struct Context<'w, 's, Message: Event> {
@@ -170,6 +179,7 @@ pub struct Context<'w, 's, Message: Event> {
     props: Res<'w, IcedResource>,
     windows: Res<'w, Windows>,
     events: ResMut<'w, IcedEventQueue>,
+    cache_map: NonSendMut<'w, IcedCache>,
     messages: EventWriter<'w, 's, Message>,
 }
 
@@ -180,7 +190,7 @@ impl<'w, 's, M: Event + std::fmt::Debug> Context<'w, 's, M> {
     ) {
         let IcedProps {
             ref mut renderer,
-            ref mut debug,
+            debug: _,
             ref mut clipboard,
         } = &mut *self.props.lock().unwrap();
         let bounds = self.viewport.logical_size();
@@ -202,9 +212,10 @@ impl<'w, 's, M: Event + std::fmt::Debug> Context<'w, 's, M> {
         };
 
         let mut messages = Vec::<M>::new();
-        let cache = user_interface::Cache::default();
+        let cache_entry = self.cache_map.get::<M>();
+        let cache = cache_entry.take().unwrap();
         let mut ui = UserInterface::build(element, bounds, cache, renderer);
-        let (_, event_statuses) = ui.update(
+        let (_, _event_statuses) = ui.update(
             self.events.as_slice(),
             cursor_position,
             renderer,
@@ -221,5 +232,7 @@ impl<'w, 's, M: Event + std::fmt::Debug> Context<'w, 's, M> {
         messages.into_iter().for_each(|msg| self.messages.send(msg));
 
         ui.draw(renderer, &theme, &style, cursor_position);
+
+        *cache_entry = Some(ui.into_cache());
     }
 }

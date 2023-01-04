@@ -5,16 +5,14 @@ use bevy::{
 };
 use bevy_iced::{
     iced::{
-        program::State,
-        widget::{Button, Row, Text},
-        Element, Program,
+        widget::{Button, Row},
     },
     IcedSettings,
 };
 use bevy_iced::{IcedPlugin};
 use bevy_inspector_egui::WorldInspectorPlugin;
 
-use iced_native::widget::{Column, text};
+use iced_native::widget::{text};
 use rand::random as rng;
 
 #[derive(Debug, Clone)]
@@ -28,7 +26,7 @@ pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             window: WindowDescriptor {
-                present_mode: bevy::window::PresentMode::AutoNoVsync,
+                // present_mode: bevy::window::PresentMode::AutoNoVsync,
                 ..Default::default()
             },
             ..Default::default()
