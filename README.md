@@ -7,41 +7,41 @@
 
 ```rust
 use bevy::prelude::*;
-use bevy_iced::{
-    IcedAppExtensions, IcedPlugin,
-    iced::{Program, program::State},
-};
+use bevy_iced::iced::widget::text;
+use bevy_iced::{IcedContext, IcedPlugin};
 
-#[derive(Default)]
-pub struct Ui {
-    // Set up your UI state
-}
-
-impl Program for Ui {
-    // Set up your program logic
-}
+#[derive(Debug)]
+pub enum UiMessage {}
 
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(IcedPlugin)
-        .insert_program(Ui::default())
+        .add_event::<UiMessage>()
         .add_system(ui_system)
         .run();
 }
 
-pub fn ui_system(mut ui_state: NonSendMut<State<Ui>>, /* ... */) {
-    // Do some work here, then modify your ui state by running
-    // ui_state.queue_message(..);
+fn ui_system(time: Res<Time>, mut ctx: IcedContext<UiMessage>) {
+    ctx.show(text(format!(
+        "Hello Iced! Running for {:.2} seconds.",
+        time.elapsed_seconds()
+    )));
 }
 ```
 
 See the [examples](https://github.com/tasgon/bevy_iced/tree/master/examples) and the [documentation](https://docs.rs/bevy_iced) for more details on how to use the crate.
 
+## Compatibility
+
+|Bevy Version  |Crate Version  |
+|--------------|---------------|
+|`0.9`         |`0.2`, `main`  |
+|`0.7`         |`0.1`          |
+
 ## Todo
 
 - Multi-window support
-- Bind programs to individual stages
 
 ## Credits
 

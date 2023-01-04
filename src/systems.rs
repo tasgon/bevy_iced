@@ -1,12 +1,8 @@
 use crate::conversions;
-use bevy::input::mouse::MouseButtonInput;
-use bevy::prelude::{ResMut, Resource, Deref, DerefMut};
-use bevy::{
-    ecs::system::SystemParam,
-    input::{keyboard::KeyboardInput, mouse::MouseWheel},
-    prelude::EventReader,
-    window::{CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter},
-};
+use bevy_derive::{Deref, DerefMut};
+use bevy_ecs::{system::{Resource, SystemParam, ResMut}, prelude::EventReader};
+use bevy_input::{mouse::{MouseButtonInput, MouseWheel}, keyboard::KeyboardInput, ButtonState};
+use bevy_window::{CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter};
 use iced_native::{keyboard, mouse, Event as IcedEvent, Point};
 
 #[derive(Resource, Deref, DerefMut, Default)]
@@ -35,10 +31,8 @@ pub fn process_input(mut events: InputEvents, mut event_queue: ResMut<IcedEventQ
     for ev in events.mouse_button.iter() {
         let button = conversions::mouse_button(ev.button);
         event_queue.push(IcedEvent::Mouse(match ev.state {
-            bevy::input::ButtonState::Pressed => iced_native::mouse::Event::ButtonPressed(button),
-            bevy::input::ButtonState::Released => {
-                iced_native::mouse::Event::ButtonReleased(button)
-            }
+            ButtonState::Pressed => iced_native::mouse::Event::ButtonPressed(button),
+            ButtonState::Released => iced_native::mouse::Event::ButtonReleased(button),
         }))
     }
 
