@@ -213,7 +213,7 @@ pub struct IcedContext<'w, 's, Message: Event> {
 
 impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
     /// Display an [`Element`] to the screen.
-    pub fn show<'a>(
+    pub fn display<'a>(
         &'a mut self,
         element: impl Into<Element<'a, M, iced_wgpu::Renderer>>,
     ) {

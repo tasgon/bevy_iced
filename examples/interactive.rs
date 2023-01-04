@@ -131,5 +131,5 @@ fn ui_system(
         .push(text("Welcome to Iced!"))
         .push(slider(0.0..=100.0, **scale, UiMessage::Scale))
         .push(row);
-    ctx.show(column);
+    ctx.display(column);
 }
