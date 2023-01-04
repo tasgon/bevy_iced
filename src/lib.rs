@@ -42,10 +42,14 @@ use crate::render::IcedNode;
 use crate::render::{IcedRenderData, ViewportResource};
 
 use bevy::ecs::all_tuples;
+use bevy::ecs::event::Event;
 use bevy::ecs::system::{
     ReadOnlySystemParamFetch, SystemParam, SystemParamFetch, SystemParamItem, SystemState,
 };
-use bevy::prelude::{Deref, DerefMut, IntoSystem, NonSendMut, Res, ResMut, Resource, System, Events};
+use bevy::prelude::{
+    Deref, DerefMut, EventWriter, Events, IntoPipeSystem, IntoSystem, NonSendMut, Res, ResMut,
+    Resource, System, EventReader,
+};
 use bevy::render::render_graph::RenderGraph;
 use bevy::render::RenderStage;
 use bevy::time::Time;
@@ -58,8 +62,10 @@ use bevy::{
         RenderApp,
     },
 };
+use iced::widget::pane_grid;
+use iced::{user_interface, UserInterface};
 pub use iced_native as iced;
-use iced_native::{program, Debug, Program, Size};
+use iced_native::{Debug, Program, Size};
 pub use iced_wgpu;
 use iced_wgpu::{wgpu, Viewport};
 
@@ -67,6 +73,7 @@ mod conversions;
 mod render;
 mod systems;
 
+use program::{BevyIcedProcessor, BevyIcedProgram};
 pub use render::IcedSettings;
 use systems::IcedEventQueue;
 
@@ -78,15 +85,18 @@ impl Plugin for IcedPlugin {
     fn build(&self, app: &mut App) {
         let default_viewport = Viewport::with_physical_size(Size::new(1600, 900), 1.0);
         let default_viewport = ViewportResource(default_viewport);
+        let iced_resource: IcedResource = IcedProps::new(app).into();
 
         app.add_system(systems::process_input)
             .add_system(render::update_viewport)
+            .insert_resource(iced_resource.clone())
             .insert_resource(IcedEventQueue::default())
             .insert_resource(default_viewport.clone());
 
         let render_app = app.sub_app_mut(RenderApp);
         render_app.insert_non_send_resource(RefCell::new(Vec::<DrawFn>::new()));
         render_app.insert_resource(default_viewport);
+        render_app.insert_resource(iced_resource);
         render_app.add_system_to_stage(RenderStage::Extract, render::extract_iced_data);
         // render_app.init_resource::<render::IcedPipeline>();
         setup_pipeline(&mut render_app.world.get_resource_mut().unwrap());
@@ -107,8 +117,42 @@ struct IcedProps {
     clipboard: iced_native::clipboard::Null,
 }
 
-#[derive(Resource, Deref, DerefMut)]
-struct IcedPropsResource(Arc<Mutex<IcedProps>>);
+impl IcedProps {
+    fn new(app: &App) -> Self {
+        let device = app
+            .sub_app(RenderApp)
+            .world
+            .get_resource::<RenderDevice>()
+            .unwrap()
+            .wgpu_device();
+        let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+
+        Self {
+            renderer: iced_wgpu::Renderer::new(iced_wgpu::Backend::new(
+                device,
+                Default::default(),
+                format,
+            )),
+            debug: Debug::new(),
+            clipboard: iced_native::clipboard::Null,
+        }
+    }
+}
+
+#[derive(Resource, Clone)]
+pub struct IcedResource(Arc<Mutex<IcedProps>>);
+
+impl IcedResource {
+    fn lock(&self) -> std::sync::LockResult<std::sync::MutexGuard<IcedProps>> {
+        self.0.lock()
+    }
+}
+
+impl From<IcedProps> for IcedResource {
+    fn from(value: IcedProps) -> Self {
+        Self(Arc::new(Mutex::new(value)))
+    }
+}
 
 struct IcedProgramData<T> {
     renderer: iced_wgpu::Renderer,
@@ -130,13 +174,13 @@ struct IcedProgram<M, T>(PhantomData<(M, T)>);
 
 impl<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static> IcedProgram<M, T> {
     fn update_fn(world: &mut World) {
-        world.resource_scope::<program::State<T>, _>(|world, mut state| {
+        world.resource_scope::<iced_native::program::State<T>, _>(|world, mut state| {
             for ev in &**world.resource::<IcedEventQueue>() {
                 state.queue_event(ev.clone());
             }
             let bounds = world.resource::<ViewportResource>().logical_size();
 
-            world.resource_scope::<IcedPropsResource, _>(|world, ctx| {
+            world.resource_scope::<IcedResource, _>(|world, ctx| {
                 let IcedProps {
                     ref mut renderer,
                     ref mut debug,
@@ -176,7 +220,7 @@ impl<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'static> IcedP
             ref mut renderer,
             ref mut debug,
             ..
-        } = &mut *world.resource::<IcedPropsResource>().lock().unwrap();
+        } = &mut *world.resource::<IcedResource>().lock().unwrap();
 
         let device = ctx.render_device.wgpu_device();
         renderer.with_primitives(|backend, primitive| {
@@ -205,7 +249,7 @@ fn create_state<M, T: Program<Renderer = iced_wgpu::Renderer, Message = M> + 'st
         ..
     } = &mut *render_world.non_send_resource_mut::<_>();
 
-    let _state = program::State::new(program, bounds, renderer, debug);
+    let _state = iced_native::program::State::new(program, bounds, renderer, debug);
 }
 
 macro_rules! base_insert_proc {
@@ -223,8 +267,12 @@ macro_rules! base_insert_proc {
         let viewport = Viewport::with_physical_size(Size::new(1600, 900), 1.0);
         let mut debug = Debug::new();
         let mut clipboard = iced_native::clipboard::Null;
-        let program =
-            program::State::new($program, viewport.logical_size(), &mut renderer, &mut debug);
+        let program = iced_native::program::State::new(
+            $program,
+            viewport.logical_size(),
+            &mut renderer,
+            &mut debug,
+        );
 
         let update_data = Arc::new(IcedProgramData::<T> {
             renderer,
@@ -321,7 +369,7 @@ impl IcedAppExtensions for App {
         &mut self,
         program: T,
     ) -> &mut Self {
-        let resource = base_insert_proc!(self, program, NonSendMut<program::State<T>>);
+        let resource = base_insert_proc!(self, program, NonSendMut<iced_native::program::State<T>>);
         self.insert_non_send_resource(resource)
     }
 }
@@ -345,13 +393,13 @@ unsafe fn get_rc_mut<'a, T>(rc: &'a Arc<T>) -> &'a mut T {
 
 type Element<'a> = iced::Element<'a, (), iced_wgpu::Renderer>;
 
-trait Invoker<Params, Out> {
+pub(crate) trait Invoker<Params, Out>: 'static {
     fn invoke(&self, params: Params) -> Out;
 }
 
 macro_rules! invoker_impl {
     ($($param: ident),*) => {
-        impl<$($param,)* Out, F> Invoker<($($param,)*), Out> for F
+        impl<$($param,)* Out, F: 'static> Invoker<($($param,)*), Out> for F
         where
             F: Fn($($param,)*) -> Out
         {
@@ -362,102 +410,142 @@ macro_rules! invoker_impl {
         }
     };
 }
-all_tuples!(invoker_impl, 0, 16, P);
+// all_tuples!(invoker_impl, 0, 16, P);
 
-pub trait ElementProvider {
-    type In: SystemParam + 'static;
+mod program;
 
-    fn process<'a>(&self, input: Self::In) -> Element<'a>;
-
-    fn get_state(&self, world: &mut World) -> SystemState<Self::In> {
-        SystemState::<Self::In>::new(world)
-    }
+#[derive(Default)]
+pub struct BevyIcedContext {
+    program: Option<Box<dyn std::any::Any>>,
 }
 
-fn thonk<Params: SystemParam + 'static, Out, F: Invoker<Params, Out>>(
-    f: &F,
-    world: &mut World,
-) -> SystemState<Params> {
-    let state = SystemState::<Params>::new(world);
-    state
+fn t1(x: &i32) -> &i32 {
+    x
 }
 
-fn doomer<'a, Params: SystemParam + 'static, Out, F: Invoker<<Params::Fetch as SystemParamFetch<'a, 'a>>::Item, Out>>(
-    f: &F,
-    world: &'a World,
-    state: &'a mut SystemState<Params>,
-) -> Out
-where
-    Params::Fetch: ReadOnlySystemParamFetch,
-{
-    let params = state.get(world);
-    f.invoke(params)
+// fn t2() -> impl for<'a> Invoker<(&'a i32,), &'a i32> {
+//     t1
+// }
+
+// trait Retriever<'a, T> {
+//     fn data(&self) -> &'a T;
+// }
+
+// impl<'a, T: Resource> Retriever<'a, T> for Res<'a, T> {
+//     fn data(&self) -> &'a T {
+//         unsafe { &*(self.as_ref() as *const _) }
+//     }
+// }
+
+// fn el_test(state: Res<WindowState>) -> Element {
+//     let pane = &state.data().pane;
+//     let grid = pane_grid::PaneGrid::new(pane, |pane, state, is_maximized| {
+//         pane_grid::Content::new(iced_native::widget::text("text"))
+//     });
+
+//     grid.into()
+// }
+
+// fn t3() -> impl 'static + for<'a> Invoker<(Res<'a, Time>,), Element<'a>> {
+//     el_test
+// }
+
+// fn get_params<P, Out>(world: &mut World, f: impl Invoker<<<P as SystemParam>::Fetch as SystemParamFetch>::Item, Out>) -> SystemState<P>
+// where
+//     P: SystemParam + 'static
+// {
+//     SystemState::new(world)
+// }
+
+fn test(world: &mut World, ctx: &mut BevyIcedContext) {
+    // let p = crate::program::BevyIcedProgram {
+    //     world_ref: None,
+    //     system_state: None,
+    //     system: el_test
+    // };
+
+    // let b: SystemState<(Res<Time>,)> = get_params(world, el_test);
+
+    // el_test.pipe(|t: bevy::prelude::In<Element>| {});
+
+    // let v: Arc<dyn BevyIcedProcessor> = Arc::new(p);
+
+    // ctx.set(el_test);
 }
 
-pub struct Ctx {
-    prog: Box<dyn BevyIcedProcessor>
+// fn wtf<F: 'static + for<'a> Fn(Res<'a, Time>) -> Element<'a>>(t: BevyIcedProgram<F, (Res<Time>,)>)
+//     -> impl Program<Renderer = iced_wgpu::Renderer, Message = ()> {
+//     t
+// }
+
+#[derive(SystemParam)]
+pub struct Context<'w, 's, Message: Event> {
+    context: NonSendMut<'w, BevyIcedContext>,
+    viewport: Res<'w, ViewportResource>,
+    props: Res<'w, IcedResource>,
+    windows: Res<'w, Windows>,
+    events: ResMut<'w, IcedEventQueue>,
+    messages: EventWriter<'w, 's, Message>,
 }
 
-struct BevyIcedProgram<F, P: SystemParam + 'static> {
-    world_ref: Option<*const World>,
-    system_state: Option<UnsafeCell<SystemState<P>>>,
-    system: F,
-    _p: PhantomData<P>
-}
+type BIS<M> = iced_native::program::State<program::BIP<M>>;
 
-impl<Params: SystemParam + 'static, F: for<'a> Invoker<<Params::Fetch as SystemParamFetch<'a, 'a>>::Item, Element<'a>>> BevyIcedProgram<F, Params>
-where Params::Fetch: ReadOnlySystemParamFetch
-{
-    pub fn new(system: F) -> Self {
-        Self {
-            world_ref: None,
-            system_state: None,
-            system,
-            _p: Default::default(),
-        }
-    }
+impl<'w, 's, M: Event + std::fmt::Debug> Context<'w, 's, M> {
+    pub fn show<'a>(
+        &'a mut self,
+        element: impl Into<iced_native::Element<'a, M, iced_wgpu::Renderer>>,
+    ) {
+        let IcedProps {
+            ref mut renderer,
+            ref mut debug,
+            ref mut clipboard,
+        } = &mut *self.props.lock().unwrap();
+        let bounds = self.viewport.logical_size();
 
-    pub fn update(&mut self, world: &mut World) {
-        let world_ptr = world as *const World;
-        if self.world_ref.map(|x| x == world_ptr).unwrap_or(false) {
-            self.world_ref = Some(world_ptr);
-            self.system_state = Some(UnsafeCell::new(SystemState::<Params>::new(world)))
-        }
-    }
-}
+        let element = element.into();
+        // let program = self.context.program.take()
+        //     .and_then(|x| x.downcast::<BIS<M>>().ok())
+        //     .unwrap_or_else(|| {
+        //         let program = iced_native::program::State::new(
+        //             program::BIP::new(),
+        //             self.viewport.logical_size(),
+        //             renderer,
+        //             debug,
+        //         );
 
-impl<Params: SystemParam + 'static, F: for<'a> Invoker<<Params::Fetch as SystemParamFetch<'a, 'a>>::Item, Element<'a>>> Program for BevyIcedProgram<F, Params>
-where Params::Fetch: ReadOnlySystemParamFetch
-{
-    type Renderer = iced_wgpu::Renderer;
-    type Message = ();
+        //         Box::new(program)
+        //     });
 
-    fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
-        let world = unsafe { &mut *(self.world_ref.unwrap() as *mut World) };
-        let mut events = world.resource_mut::<Events<Self::Message>>();
-        events.send(message);
-        iced::Command::none()
-    }
+        let cursor_position = {
+            let window = self.windows.get_primary().unwrap();
+            let cursor_position =
+                window
+                    .cursor_position()
+                    .map_or(iced_native::Point { x: 0.0, y: 0.0 }, |p| {
+                        iced_native::Point {
+                            x: p.x * bounds.width / window.width(),
+                            y: (window.height() - p.y) * bounds.height / window.height(),
+                        }
+                    });
+            cursor_position
+        };
 
-    fn view(&self) -> iced::Element<'_, Self::Message, Self::Renderer> {
-        let world = unsafe { &*self.world_ref.unwrap() };
-        let state = self.system_state.as_ref().map(|x| unsafe { &mut *x.get() }).unwrap();
-        let params = state.get(world);
-        self.system.invoke(params)
-    }
-}
+        let mut messages = Vec::<M>::new();
+        let cache = user_interface::Cache::default();
+        let mut ui = UserInterface::build(element, bounds, cache, renderer);
+        let (_, event_statuses) = ui.update(
+            self.events.as_slice(),
+            cursor_position,
+            renderer,
+            clipboard,
+            &mut messages,
+        );
 
-trait BevyIcedProcessor {
-    fn update(&mut self);
-    fn render(&self);
-}
+        let theme = iced_wgpu::Theme::Dark;
+        let style = iced_native::renderer::Style {
+            text_color: iced_native::Color::WHITE,
+        };
 
-impl<F, P: SystemParam + 'static> BevyIcedProcessor for program::State<BevyIcedProgram<F, P>> where BevyIcedProgram<F, P>: Program {
-    fn update(&mut self) {
-        todo!()
-    }
-
-    fn render(&self) {
-        todo!()
+        ui.draw(renderer, &theme, &style, cursor_position);
     }
 }

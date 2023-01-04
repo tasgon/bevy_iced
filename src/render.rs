@@ -11,7 +11,7 @@ use iced_wgpu::{
     Viewport,
 };
 
-use crate::DrawFn;
+use crate::{DrawFn, IcedResource, IcedProps};
 
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
 
@@ -23,7 +23,7 @@ pub struct IcedSettings {
 }
 
 #[derive(Resource, Deref, DerefMut, Clone)]
-pub(crate) struct ViewportResource(pub Viewport);
+pub struct ViewportResource(pub Viewport);
 
 pub(crate) fn update_viewport(
     windows: Res<Windows>,
@@ -75,28 +75,34 @@ impl Node for IcedNode {
         render_context: &mut bevy::render::renderer::RenderContext,
         world: &bevy::prelude::World,
     ) -> Result<(), bevy::render::render_graph::NodeRunError> {
-        let draw_fns = world
-            .get_non_send_resource::<RefCell<Vec<DrawFn>>>()
-            .unwrap();
-
-        let viewport = world.get_resource::<ViewportResource>().unwrap();
-
         let Some(extracted_window) = world
             .get_resource::<ExtractedWindows>()
             .unwrap()
             .windows
             .values()
             .next() else { return Ok(()) };
-        let swap_chain_texture = extracted_window.swap_chain_texture.as_ref().unwrap();
+        let view = extracted_window.swap_chain_texture.as_ref().unwrap();
         let staging_belt = &mut *self.staging_belt.lock().unwrap();
 
-        let mut render_data = IcedRenderData {
-            view: &swap_chain_texture,
-            staging_belt,
-        };
-        for f in &mut *draw_fns.borrow_mut() {
-            (f)(world, render_context, viewport, &mut render_data);
-        }
+        let IcedProps {
+            ref mut renderer,
+            ref mut debug,
+            ..
+        } = &mut *world.resource::<IcedResource>().lock().unwrap();
+        let viewport = &*world.resource::<ViewportResource>();
+        let device = render_context.render_device.wgpu_device();
+        renderer.with_primitives(|backend, primitives| {
+            backend.present(
+                device,
+                staging_belt,
+                &mut render_context.command_encoder,
+                view,
+                primitives,
+                viewport,
+                &debug.overlay(),
+            );
+        });
+
         staging_belt.finish();
 
         Ok(())
