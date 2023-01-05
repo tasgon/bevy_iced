@@ -42,6 +42,7 @@ See the [examples](https://github.com/tasgon/bevy_iced/tree/master/examples) and
 ## Todo
 
 - Multi-window support
+- Clipboard support
 
 ## Credits
 

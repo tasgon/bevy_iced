@@ -2,12 +2,13 @@ use crate::conversions;
 use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::{
     prelude::EventReader,
-    system::{ResMut, Resource, SystemParam},
+    system::{Res, ResMut, Resource, SystemParam},
 };
+use bevy_input::keyboard::KeyCode;
 use bevy_input::{
     keyboard::KeyboardInput,
     mouse::{MouseButtonInput, MouseWheel},
-    ButtonState,
+    ButtonState, Input,
 };
 use bevy_window::{CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter};
 use iced_native::{keyboard, mouse, Event as IcedEvent, Point};
@@ -26,7 +27,28 @@ pub struct InputEvents<'w, 's> {
     keyboard_input: EventReader<'w, 's, KeyboardInput>,
 }
 
-pub fn process_input(mut events: InputEvents, mut event_queue: ResMut<IcedEventQueue>) {
+fn compute_modifiers(input_map: &Input<KeyCode>) -> keyboard::Modifiers {
+    let mut modifiers = keyboard::Modifiers::default();
+    if input_map.any_pressed([KeyCode::LControl, KeyCode::RControl]) {
+        modifiers |= keyboard::Modifiers::CTRL;
+    }
+    if input_map.any_pressed([KeyCode::LShift, KeyCode::RShift]) {
+        modifiers |= keyboard::Modifiers::SHIFT;
+    }
+    if input_map.any_pressed([KeyCode::LAlt, KeyCode::RAlt]) {
+        modifiers |= keyboard::Modifiers::ALT;
+    }
+    if input_map.any_pressed([KeyCode::LWin, KeyCode::RWin]) {
+        modifiers |= keyboard::Modifiers::LOGO;
+    }
+    modifiers
+}
+
+pub fn process_input(
+    mut events: InputEvents,
+    mut event_queue: ResMut<IcedEventQueue>,
+    input_map: Res<Input<KeyCode>>,
+) {
     event_queue.clear();
 
     for ev in events.cursor.iter() {
@@ -65,20 +87,34 @@ pub fn process_input(mut events: InputEvents, mut event_queue: ResMut<IcedEventQ
 
     for ev in events.keyboard_input.iter() {
         if let Some(code) = ev.key_code {
-            let key_code = conversions::key_code(code);
-            let modifiers = keyboard::Modifiers::default();
-            let ev = if ev.state.is_pressed() {
-                keyboard::Event::KeyPressed {
-                    key_code,
-                    modifiers,
-                }
-            } else {
-                keyboard::Event::KeyReleased {
-                    key_code,
-                    modifiers,
+            use keyboard::Event::*;
+            let modifiers = compute_modifiers(&*input_map);
+            let event = match code {
+                KeyCode::LControl
+                | KeyCode::RControl
+                | KeyCode::LShift
+                | KeyCode::RShift
+                | KeyCode::LAlt
+                | KeyCode::RAlt
+                | KeyCode::LWin
+                | KeyCode::RWin => ModifiersChanged(modifiers),
+                code => {
+                    let key_code = conversions::key_code(code);
+                    if ev.state.is_pressed() {
+                        KeyPressed {
+                            key_code,
+                            modifiers,
+                        }
+                    } else {
+                        KeyReleased {
+                            key_code,
+                            modifiers,
+                        }
+                    }
                 }
             };
-            event_queue.push(IcedEvent::Keyboard(ev));
+
+            event_queue.push(IcedEvent::Keyboard(event));
         }
     }
 }

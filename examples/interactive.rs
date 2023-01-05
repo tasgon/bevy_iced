@@ -4,23 +4,26 @@ use bevy::{
     prelude::*,
 };
 use bevy_iced::{
-    iced::widget::{slider, text, Button, Column, Row},
+    iced::widget::{slider, text, text_input, Button, Column, Row},
     IcedContext, IcedPlugin, IcedSettings,
 };
-
 use rand::random as rng;
 
 #[derive(Debug, Clone)]
 enum UiMessage {
     BoxRequested,
     Scale(f32),
+    Text(String),
 }
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct UiActive(bool);
 
-#[derive(Resource, Deref, DerefMut)]
-pub struct BoxScale(f32);
+#[derive(Resource)]
+pub struct UiData {
+    scale: f32,
+    text: String,
+}
 
 pub fn main() {
     App::new()
@@ -36,7 +39,10 @@ pub fn main() {
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_event::<UiMessage>()
         .insert_resource(UiActive(true))
-        .insert_resource(BoxScale(50.0))
+        .insert_resource(UiData {
+            scale: 50.0,
+            text: "Welcome to Iced!".to_owned(),
+        })
         .insert_resource(IcedSettings {
             scale_factor: None,
             theme: bevy_iced::iced_wgpu::Theme::Light,
@@ -57,16 +63,18 @@ fn build_program(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 }
 
-fn tick(mut sprites: Query<(&mut Sprite,)>, time: Res<Time>, scale: Res<BoxScale>) {
-    for (mut s,) in sprites.iter_mut() {
-        s.custom_size = Some(Vec2::new(**scale, **scale) * time.elapsed_seconds().sin().abs());
+fn tick(mut sprites: Query<&mut Sprite>, time: Res<Time>, data: Res<UiData>) {
+    let scale = data.scale;
+    for mut s in sprites.iter_mut() {
+        s.custom_size = Some(Vec2::new(scale, scale) * time.elapsed_seconds().sin().abs());
     }
 }
 
 fn box_system(
     mut commands: Commands,
     mut messages: EventReader<UiMessage>,
-    mut scale: ResMut<BoxScale>,
+    mut data: ResMut<UiData>,
+    mut sprites: Query<&mut Sprite>,
 ) {
     let pos = (Vec3::new(rng(), rng(), 0.0) - Vec3::new(0.5, 0.5, 0.0)) * 300.0;
     for msg in messages.iter() {
@@ -83,7 +91,13 @@ fn box_system(
                 });
             }
             UiMessage::Scale(new_scale) => {
-                **scale = *new_scale;
+                data.scale = *new_scale;
+            }
+            UiMessage::Text(s) => {
+                data.text = s.clone();
+                for mut i in &mut sprites.iter_mut() {
+                    i.color = Color::rgba_u8(rng(), rng(), rng(), rng());
+                }
             }
         }
     }
@@ -113,7 +127,7 @@ fn toggle_ui(mut buttons: EventReader<MouseButtonInput>, mut ui_active: ResMut<U
 
 fn ui_system(
     mut ctx: IcedContext<UiMessage>,
-    scale: Res<BoxScale>,
+    data: Res<UiData>,
     sprites: Query<(&Sprite,)>,
     ui_active: Res<UiActive>,
 ) {
@@ -128,13 +142,14 @@ fn ui_system(
         .push(text(format!(
             "{} boxes (amplitude: {})",
             sprites.iter().len(),
-            **scale
+            data.scale
         )));
+    let edit = text_input("", &data.text, UiMessage::Text);
     let column = Column::new()
         .align_items(iced_native::Alignment::Center)
         .spacing(10)
-        .push(text("Welcome to Iced!"))
-        .push(slider(0.0..=100.0, **scale, UiMessage::Scale))
+        .push(edit)
+        .push(slider(0.0..=100.0, data.scale, UiMessage::Scale))
         .push(row);
     ctx.display(column);
 }
