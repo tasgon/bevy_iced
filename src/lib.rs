@@ -36,15 +36,15 @@ use std::sync::Mutex;
 use crate::render::IcedNode;
 use crate::render::ViewportResource;
 
-use bevy_app::{App, Plugin};
+use bevy_app::{App, IntoSystemAppConfig, Plugin};
 use bevy_ecs::event::Event;
-use bevy_ecs::prelude::EventWriter;
+use bevy_ecs::prelude::{EventWriter, Query};
 use bevy_ecs::system::{NonSendMut, Res, ResMut, Resource, SystemParam};
 use bevy_render::render_graph::RenderGraph;
 use bevy_render::renderer::RenderDevice;
-use bevy_render::{RenderApp, RenderStage};
+use bevy_render::{ExtractSchedule, RenderApp};
 use bevy_utils::HashMap;
-use bevy_window::Windows;
+use bevy_window::Window;
 use iced::{user_interface, Element, UserInterface};
 pub use iced_native as iced;
 use iced_native::{Debug, Size};
@@ -79,7 +79,7 @@ impl Plugin for IcedPlugin {
         render_app
             .insert_resource(default_viewport)
             .insert_resource(iced_resource)
-            .add_system_to_stage(RenderStage::Extract, render::extract_iced_data);
+            .add_system(render::extract_iced_data.in_schedule(ExtractSchedule));
         setup_pipeline(&mut render_app.world.get_resource_mut().unwrap());
     }
 }
@@ -139,8 +139,7 @@ fn setup_pipeline(graph: &mut RenderGraph) {
         .add_node_edge(
             bevy_render::main_graph::node::CAMERA_DRIVER,
             render::ICED_PASS,
-        )
-        .unwrap();
+        );
 }
 
 #[doc(hidden)]
@@ -205,10 +204,10 @@ pub struct IcedContext<'w, 's, Message: Event> {
     viewport: Res<'w, ViewportResource>,
     props: Res<'w, IcedResource>,
     settings: Res<'w, IcedSettings>,
-    windows: Res<'w, Windows>,
+    windows: Query<'w, 's, &'static Window>,
     events: ResMut<'w, IcedEventQueue>,
     cache_map: NonSendMut<'w, IcedCache>,
-    messages: EventWriter<'w, 's, Message>,
+    messages: EventWriter<'w, Message>,
 }
 
 impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
@@ -225,7 +224,7 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
         let element = element.into();
 
         let cursor_position = {
-            let window = self.windows.get_primary().unwrap();
+            let window = self.windows.single();
             let cursor_position =
                 window
                     .cursor_position()
