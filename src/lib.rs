@@ -84,11 +84,18 @@ impl Plugin for IcedPlugin {
     }
 }
 
+#[derive(PartialEq)]
+enum DidDraw {
+    No,
+    LastFrame,
+    Yes,
+}
+
 struct IcedProps {
     renderer: iced_wgpu::Renderer,
     debug: iced_native::Debug,
     clipboard: iced_native::clipboard::Null,
-    did_draw: bool,
+    did_draw: DidDraw,
 }
 
 impl IcedProps {
@@ -109,7 +116,7 @@ impl IcedProps {
             )),
             debug: Debug::new(),
             clipboard: iced_native::clipboard::Null,
-            did_draw: false,
+            did_draw: DidDraw::No,
         }
     }
 }
@@ -260,6 +267,6 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
 
         self.events.clear();
         *cache_entry = Some(ui.into_cache());
-        *did_draw = true;
+        *did_draw = DidDraw::Yes;
     }
 }

@@ -13,7 +13,7 @@ use bevy_ecs::prelude::Query;
 use bevy_render::renderer::RenderDevice;
 use bevy_window::Window;
 
-use crate::{IcedProps, IcedResource, IcedSettings};
+use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};
 
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
 
@@ -76,8 +76,14 @@ impl Node for IcedNode {
         } = &mut *world.resource::<IcedResource>().lock().unwrap();
         let render_device = world.resource::<RenderDevice>();
 
-        if !*did_draw {
+        if *did_draw == DidDraw::No {
             return Ok(());
+        }
+
+        match *did_draw {
+            DidDraw::No => return Ok(()),
+            DidDraw::LastFrame => *did_draw = DidDraw::No,
+            DidDraw::Yes => *did_draw = DidDraw::LastFrame,
         }
 
         let view = extracted_window.swap_chain_texture.as_ref().unwrap();
@@ -99,7 +105,6 @@ impl Node for IcedNode {
         });
 
         staging_belt.finish();
-        *did_draw = false;
 
         Ok(())
     }
