@@ -28,10 +28,10 @@ pub struct UiData {
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
+            primary_window: Some(Window {
                 present_mode: bevy_window::PresentMode::AutoNoVsync,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         }))
         .add_plugin(IcedPlugin)

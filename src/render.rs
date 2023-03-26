@@ -1,19 +1,22 @@
 use bevy_derive::{Deref, DerefMut};
-use bevy_ecs::{system::{Commands, Res, Resource}, world::World};
+use bevy_ecs::prelude::Query;
+use bevy_ecs::{
+    system::{Commands, Res, Resource},
+    world::World,
+};
+use bevy_render::renderer::RenderDevice;
 use bevy_render::{
     render_graph::{Node, NodeRunError, RenderGraphContext},
     renderer::RenderContext,
     view::ExtractedWindows,
     Extract,
 };
+use bevy_window::Window;
 use iced_native::Size;
 use iced_wgpu::{wgpu::util::StagingBelt, Viewport};
 use std::sync::Mutex;
-use bevy_ecs::prelude::Query;
-use bevy_render::renderer::RenderDevice;
-use bevy_window::Window;
 
-use crate::{IcedProps, IcedResource, IcedSettings};
+use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};
 
 pub const ICED_PASS: &'static str = "bevy_iced_pass";
 
@@ -34,8 +37,19 @@ pub(crate) fn update_viewport(
     commands.insert_resource(ViewportResource(viewport));
 }
 
-pub(crate) fn extract_iced_data(mut commands: Commands, viewport: Extract<Res<ViewportResource>>) {
+// Same as DidDraw, but as a regular bool instead of an atomic.
+#[derive(Resource, Deref, DerefMut)]
+struct DidDrawBasic(bool);
+
+pub(crate) fn extract_iced_data(
+    mut commands: Commands,
+    viewport: Extract<Res<ViewportResource>>,
+    did_draw: Extract<Res<DidDraw>>,
+) {
     commands.insert_resource(viewport.clone());
+    commands.insert_resource(DidDrawBasic(
+        did_draw.swap(false, std::sync::atomic::Ordering::Relaxed),
+    ));
 }
 
 pub struct IcedNode {
@@ -69,14 +83,15 @@ impl Node for IcedNode {
             .next() else { return Ok(()) };
 
         let IcedProps {
-            renderer,
-            debug,
-            did_draw,
-            ..
+            renderer, debug, ..
         } = &mut *world.resource::<IcedResource>().lock().unwrap();
         let render_device = world.resource::<RenderDevice>();
 
-        if !*did_draw {
+        if !world
+            .get_resource::<DidDrawBasic>()
+            .map(|x| x.0)
+            .unwrap_or(false)
+        {
             return Ok(());
         }
 
@@ -99,7 +114,6 @@ impl Node for IcedNode {
         });
 
         staging_belt.finish();
-        *did_draw = false;
 
         Ok(())
     }
