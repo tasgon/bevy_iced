@@ -4,7 +4,6 @@ use bevy_iced::{IcedContext, IcedPlugin};
 use bevy_input::keyboard::KeyboardInput;
 use bevy_input::ButtonState;
 
-#[derive(Debug)]
 pub enum UiMessage {}
 
 #[derive(Resource, PartialEq, Eq)]

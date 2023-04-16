@@ -9,7 +9,7 @@ use bevy_iced::{
 };
 use rand::random as rng;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 enum UiMessage {
     BoxRequested,
     Scale(f32),
