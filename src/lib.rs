@@ -39,13 +39,13 @@ use crate::render::ViewportResource;
 use bevy_app::{App, IntoSystemAppConfig, Plugin};
 use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::event::Event;
-use bevy_ecs::prelude::{EventWriter, Query};
+use bevy_ecs::prelude::{EventWriter, Query, With};
 use bevy_ecs::system::{NonSendMut, Res, ResMut, Resource, SystemParam};
 use bevy_render::render_graph::RenderGraph;
 use bevy_render::renderer::RenderDevice;
 use bevy_render::{ExtractSchedule, RenderApp};
 use bevy_utils::HashMap;
-use bevy_window::Window;
+use bevy_window::{Window, PrimaryWindow};
 use iced::{user_interface, Element, UserInterface};
 pub use iced_native as iced;
 use iced_native::{Debug, Size};
@@ -204,7 +204,7 @@ pub struct IcedContext<'w, 's, Message: Event> {
     viewport: Res<'w, ViewportResource>,
     props: Res<'w, IcedResource>,
     settings: Res<'w, IcedSettings>,
-    windows: Query<'w, 's, &'static Window>,
+    windows: Query<'w, 's, &'static Window, With<PrimaryWindow>>,
     events: ResMut<'w, IcedEventQueue>,
     cache_map: NonSendMut<'w, IcedCache>,
     messages: EventWriter<'w, Message>,
