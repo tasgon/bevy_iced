@@ -9,7 +9,7 @@ use bevy_iced::{
 };
 use rand::random as rng;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 enum UiMessage {
     BoxRequested,
     Scale(f32),
@@ -28,10 +28,10 @@ pub struct UiData {
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
+            primary_window: Some(Window {
                 present_mode: bevy_window::PresentMode::AutoNoVsync,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         }))
         .add_plugin(IcedPlugin)
@@ -144,7 +144,7 @@ fn ui_system(
             sprites.iter().len(),
             data.scale
         )));
-    let edit = text_input("", &data.text, UiMessage::Text);
+    let edit = text_input("", &data.text).on_input(UiMessage::Text);
     let column = Column::new()
         .align_items(iced_native::Alignment::Center)
         .spacing(10)

@@ -4,8 +4,7 @@
 //! use bevy::prelude::*;
 //! use bevy_iced::iced::widget::text;
 //! use bevy_iced::{IcedContext, IcedPlugin};
-//!
-//! #[derive(Debug)]
+//! 
 //! pub enum UiMessage {}
 //!
 //! pub fn main() {
@@ -36,15 +35,16 @@ use std::sync::Mutex;
 use crate::render::IcedNode;
 use crate::render::ViewportResource;
 
-use bevy_app::{App, Plugin};
+use bevy_app::{App, IntoSystemAppConfig, Plugin};
+use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::event::Event;
-use bevy_ecs::prelude::EventWriter;
+use bevy_ecs::prelude::{EventWriter, Query, With};
 use bevy_ecs::system::{NonSendMut, Res, ResMut, Resource, SystemParam};
 use bevy_render::render_graph::RenderGraph;
 use bevy_render::renderer::RenderDevice;
-use bevy_render::{RenderApp, RenderStage};
+use bevy_render::{ExtractSchedule, RenderApp};
 use bevy_utils::HashMap;
-use bevy_window::Windows;
+use bevy_window::{Window, PrimaryWindow};
 use iced::{user_interface, Element, UserInterface};
 pub use iced_native as iced;
 use iced_native::{Debug, Size};
@@ -69,6 +69,7 @@ impl Plugin for IcedPlugin {
 
         app.add_system(systems::process_input)
             .add_system(render::update_viewport)
+            .insert_resource(DidDraw::default())
             .insert_resource(iced_resource.clone())
             .insert_resource(IcedSettings::default())
             .insert_non_send_resource(IcedCache::default())
@@ -79,7 +80,7 @@ impl Plugin for IcedPlugin {
         render_app
             .insert_resource(default_viewport)
             .insert_resource(iced_resource)
-            .add_system_to_stage(RenderStage::Extract, render::extract_iced_data);
+            .add_system(render::extract_iced_data.in_schedule(ExtractSchedule));
         setup_pipeline(&mut render_app.world.get_resource_mut().unwrap());
     }
 }
@@ -88,7 +89,6 @@ struct IcedProps {
     renderer: iced_wgpu::Renderer,
     debug: iced_native::Debug,
     clipboard: iced_native::clipboard::Null,
-    did_draw: bool,
 }
 
 impl IcedProps {
@@ -109,16 +109,12 @@ impl IcedProps {
             )),
             debug: Debug::new(),
             clipboard: iced_native::clipboard::Null,
-            did_draw: false,
         }
     }
 }
 
-// This (and IcedCache) shouldn't be `pub` at all, but IcedContext can't be a `SystemParam`
-// otherwise (until https://github.com/bevyengine/bevy/issues/4200 gets resolved).
-#[doc(hidden)]
 #[derive(Resource, Clone)]
-pub struct IcedResource(Arc<Mutex<IcedProps>>);
+struct IcedResource(Arc<Mutex<IcedProps>>);
 
 impl IcedResource {
     fn lock(&self) -> std::sync::LockResult<std::sync::MutexGuard<IcedProps>> {
@@ -135,12 +131,10 @@ impl From<IcedProps> for IcedResource {
 fn setup_pipeline(graph: &mut RenderGraph) {
     graph.add_node(render::ICED_PASS, IcedNode::new());
 
-    graph
-        .add_node_edge(
-            bevy_render::main_graph::node::CAMERA_DRIVER,
-            render::ICED_PASS,
-        )
-        .unwrap();
+    graph.add_node_edge(
+        bevy_render::main_graph::node::CAMERA_DRIVER,
+        render::ICED_PASS,
+    );
 }
 
 #[doc(hidden)]
@@ -190,6 +184,10 @@ impl Default for IcedSettings {
     }
 }
 
+// An atomic flag for updating the draw state.
+#[derive(Resource, Deref, DerefMut, Default)]
+pub(crate) struct DidDraw(std::sync::atomic::AtomicBool);
+
 /// The context for interacting with Iced. Add this as a parameter to your system.
 /// ```no_run
 /// fn ui_system(..., mut ctx: IcedContext<UiMessage>) {
@@ -205,10 +203,11 @@ pub struct IcedContext<'w, 's, Message: Event> {
     viewport: Res<'w, ViewportResource>,
     props: Res<'w, IcedResource>,
     settings: Res<'w, IcedSettings>,
-    windows: Res<'w, Windows>,
+    windows: Query<'w, 's, &'static Window, With<PrimaryWindow>>,
     events: ResMut<'w, IcedEventQueue>,
     cache_map: NonSendMut<'w, IcedCache>,
-    messages: EventWriter<'w, 's, Message>,
+    messages: EventWriter<'w, Message>,
+    did_draw: ResMut<'w, DidDraw>,
 }
 
 impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
@@ -217,7 +216,6 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
         let IcedProps {
             ref mut renderer,
             ref mut clipboard,
-            ref mut did_draw,
             ..
         } = &mut *self.props.lock().unwrap();
         let bounds = self.viewport.logical_size();
@@ -225,7 +223,7 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
         let element = element.into();
 
         let cursor_position = {
-            let window = self.windows.get_primary().unwrap();
+            let window = self.windows.single();
             let cursor_position =
                 window
                     .cursor_position()
@@ -261,6 +259,7 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
 
         self.events.clear();
         *cache_entry = Some(ui.into_cache());
-        *did_draw = true;
+        self.did_draw
+            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }

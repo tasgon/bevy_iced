@@ -10,7 +10,6 @@ use bevy::prelude::*;
 use bevy_iced::iced::widget::text;
 use bevy_iced::{IcedContext, IcedPlugin};
 
-#[derive(Debug)]
 pub enum UiMessage {}
 
 pub fn main() {
@@ -36,7 +35,8 @@ See the [examples](https://github.com/tasgon/bevy_iced/tree/master/examples) and
 
 |Bevy Version  |Crate Version  |
 |--------------|---------------|
-|`0.9`         |`0.2`, `master`|
+|`0.10`        |`0.3`, `master`|
+|`0.9`         |`0.2`          |
 |`0.7`         |`0.1`          |
 
 ## Todo
