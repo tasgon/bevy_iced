@@ -144,7 +144,7 @@ fn ui_system(
             sprites.iter().len(),
             data.scale
         )));
-    let edit = text_input("", &data.text, UiMessage::Text);
+    let edit = text_input("", &data.text).on_input(UiMessage::Text);
     let column = Column::new()
         .align_items(iced_native::Alignment::Center)
         .spacing(10)

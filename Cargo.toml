@@ -1,6 +1,6 @@
 [package]
 name = "bevy_iced"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2021"
 description = "Iced integration for Bevy"
 authors = ["tasgon <tasgon_@outlook.com>"]
@@ -21,8 +21,8 @@ bevy_render = "0.10"
 bevy_utils = "0.10"
 bevy_window = "0.10"
 
-iced_wgpu = { git = "https://github.com/kulkalkul/iced.git", branch = "self-usage", package = "iced_wgpu" }
-iced_native = { git = "https://github.com/kulkalkul/iced.git", branch = "self-usage", package = "iced_native" }
+iced_wgpu = "0.10"
+iced_native = "0.10"
 
 [dev-dependencies]
 bevy = "0.10"
