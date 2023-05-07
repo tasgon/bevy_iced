@@ -4,7 +4,7 @@
 //! use bevy::prelude::*;
 //! use bevy_iced::iced::widget::text;
 //! use bevy_iced::{IcedContext, IcedPlugin};
-//! 
+//!
 //! pub enum UiMessage {}
 //!
 //! pub fn main() {

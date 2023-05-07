@@ -18,7 +18,7 @@ use std::sync::Mutex;
 
 use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};
 
-pub const ICED_PASS: &'static str = "bevy_iced_pass";
+pub const ICED_PASS: &str = "bevy_iced_pass";
 
 #[derive(Resource, Deref, DerefMut, Clone)]
 pub struct ViewportResource(pub Viewport);
@@ -98,7 +98,7 @@ impl Node for IcedNode {
         let view = extracted_window.swap_chain_texture.as_ref().unwrap();
         let staging_belt = &mut *self.staging_belt.lock().unwrap();
 
-        let viewport = &*world.resource::<ViewportResource>();
+        let viewport = world.resource::<ViewportResource>();
         let device = render_device.wgpu_device();
 
         renderer.with_primitives(|backend, primitives| {

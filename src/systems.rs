@@ -92,7 +92,7 @@ pub fn process_input(
     for ev in events.keyboard_input.iter() {
         if let Some(code) = ev.key_code {
             use keyboard::Event::*;
-            let modifiers = compute_modifiers(&*input_map);
+            let modifiers = compute_modifiers(&input_map);
             let event = match code {
                 KeyCode::LControl
                 | KeyCode::RControl
