@@ -1,6 +1,15 @@
 use bevy_input::prelude::KeyCode as BevyKeyCode;
 use bevy_input::prelude::MouseButton;
+#[cfg(feature = "touch")]
+use bevy_input::touch::{TouchInput, TouchPhase};
+#[cfg(feature = "touch")]
+use bevy_math::Vec2;
 use iced_native::keyboard::KeyCode as IcedKeyCode;
+#[cfg(feature = "touch")]
+use iced_native::{
+    touch::{self, Finger},
+    Point,
+};
 
 pub fn key_code(virtual_keycode: BevyKeyCode) -> IcedKeyCode {
     match virtual_keycode {
@@ -177,5 +186,47 @@ pub fn mouse_button(button: MouseButton) -> iced_native::mouse::Button {
         MouseButton::Right => Button::Right,
         MouseButton::Middle => Button::Middle,
         MouseButton::Other(val) => Button::Other(val as u8),
+    }
+}
+
+#[cfg(feature = "touch")]
+pub fn touch_event(bevy_touch_input: &TouchInput) -> touch::Event {
+    match *bevy_touch_input {
+        TouchInput {
+            phase: TouchPhase::Started,
+            position: Vec2 { x, y },
+            id: finger,
+            ..
+        } => touch::Event::FingerPressed {
+            id: Finger(finger),
+            position: Point { x, y },
+        },
+        TouchInput {
+            phase: TouchPhase::Cancelled,
+            position: Vec2 { x, y },
+            id: finger,
+            ..
+        } => touch::Event::FingerLost {
+            id: Finger(finger),
+            position: Point { x, y },
+        },
+        TouchInput {
+            phase: TouchPhase::Ended,
+            position: Vec2 { x, y },
+            id: finger,
+            ..
+        } => touch::Event::FingerLifted {
+            id: Finger(finger),
+            position: Point { x, y },
+        },
+        TouchInput {
+            phase: TouchPhase::Moved,
+            position: Vec2 { x, y },
+            id: finger,
+            ..
+        } => touch::Event::FingerMoved {
+            id: Finger(finger),
+            position: Point { x, y },
+        },
     }
 }

@@ -23,6 +23,10 @@
 //!     )));
 //! }
 //! ```
+//!
+//! ## Feature flags
+//!
+//! - `touch`: Enables touch input. Is not exclude input from the mouse.
 
 #![deny(unsafe_code)]
 #![deny(missing_docs)]
@@ -40,11 +44,14 @@ use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::event::Event;
 use bevy_ecs::prelude::{EventWriter, Query, With};
 use bevy_ecs::system::{NonSendMut, Res, ResMut, Resource, SystemParam};
+#[cfg(feature = "touch")]
+use bevy_input::touch::Touches;
+use bevy_math::Vec2;
 use bevy_render::render_graph::RenderGraph;
 use bevy_render::renderer::RenderDevice;
 use bevy_render::{ExtractSchedule, RenderApp};
 use bevy_utils::HashMap;
-use bevy_window::{Window, PrimaryWindow};
+use bevy_window::{PrimaryWindow, Window};
 use iced::{user_interface, Element, UserInterface};
 pub use iced_native as iced;
 use iced_native::{Debug, Size};
@@ -208,6 +215,8 @@ pub struct IcedContext<'w, 's, Message: Event> {
     cache_map: NonSendMut<'w, IcedCache>,
     messages: EventWriter<'w, Message>,
     did_draw: ResMut<'w, DidDraw>,
+    #[cfg(feature = "touch")]
+    touches: Res<'w, Touches>,
 }
 
 impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
@@ -224,16 +233,15 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
 
         let cursor_position = {
             let window = self.windows.single();
-            let cursor_position =
-                window
-                    .cursor_position()
-                    .map_or(iced_native::Point { x: 0.0, y: 0.0 }, |p| {
-                        iced_native::Point {
-                            x: p.x * bounds.width / window.width(),
-                            y: (window.height() - p.y) * bounds.height / window.height(),
-                        }
-                    });
-            cursor_position
+
+            window
+                .cursor_position()
+                .map(|Vec2 { x, y }| iced_native::Point {
+                    x: x * bounds.width / window.width(),
+                    y: (window.height() - y) * bounds.height / window.height(),
+                })
+                .or_else(|| process_touch_input(self))
+                .unwrap_or(iced_native::Point::ORIGIN)
         };
 
         let mut messages = Vec::<M>::new();
@@ -262,4 +270,41 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
         self.did_draw
             .store(true, std::sync::atomic::Ordering::Relaxed);
     }
+}
+
+#[cfg(feature = "touch")]
+/// To correctly process input as last resort events are used
+fn process_touch_input<M: Event>(context: &IcedContext<M>) -> Option<iced_native::Point> {
+    context
+        .touches
+        .first_pressed_position()
+        .or(context
+            .touches
+            .iter_just_released()
+            .map(|touch| touch.position())
+            .next())
+        .map(|Vec2 { x, y }| iced_native::Point { x, y })
+        .or(context
+            .events
+            .iter()
+            .filter_map(|ev| {
+                if let iced_native::Event::Touch(
+                    iced_native::touch::Event::FingerLifted { position, .. }
+                    | iced_native::touch::Event::FingerLost { position, .. }
+                    | iced_native::touch::Event::FingerMoved { position, .. }
+                    | iced_native::touch::Event::FingerPressed { position, .. },
+                ) = ev
+                {
+                    Some(position)
+                } else {
+                    None
+                }
+            })
+            .next()
+            .copied())
+}
+
+#[cfg(not(feature = "touch"))]
+fn process_touch_input<M: Event>(_: &IcedContext<M>) -> Option<iced_native::Point> {
+    None
 }
