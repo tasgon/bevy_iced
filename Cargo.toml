@@ -12,6 +12,27 @@ documentation = "https://docs.rs/bevy_iced"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+touch = []
+bmp = ["iced_wgpu/bmp"]
+canvas = ["iced_wgpu/canvas"]
+dds = ["iced_wgpu/dds"]
+default_system_font = ["iced_wgpu/font-source"]
+farbfeld = ["iced_wgpu/farbfeld"]
+gif = ["iced_wgpu/gif"]
+hdr = ["iced_wgpu/hdr"]
+ico = ["iced_wgpu/ico"]
+image = ["iced_wgpu/image"]
+jpeg = ["iced_wgpu/jpeg"]
+jpeg_rayon = ["iced_wgpu/jpeg_rayon"]
+png = ["iced_wgpu/png"]
+pnm = ["iced_wgpu/pnm"]
+qr_code = ["iced_wgpu/qr_code"]
+spirv = ["iced_wgpu/spirv"]
+svg = ["iced_wgpu/svg"]
+webgl = ["iced_wgpu/webgl"]
+webp = ["iced_wgpu/webp"]
+
 [dependencies]
 bevy_app = "0.10"
 bevy_derive = "0.10"
