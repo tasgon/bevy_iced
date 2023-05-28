@@ -4,7 +4,7 @@ use bevy_ecs::{
     system::{Commands, Res, Resource},
     world::World,
 };
-use bevy_render::renderer::RenderDevice;
+use bevy_render::renderer::{RenderDevice, RenderQueue};
 use bevy_render::{
     render_graph::{Node, NodeRunError, RenderGraphContext},
     renderer::RenderContext,
@@ -12,9 +12,9 @@ use bevy_render::{
     Extract,
 };
 use bevy_window::Window;
-use iced_native::Size;
-use iced_wgpu::{wgpu::util::StagingBelt, Viewport};
-use std::sync::Mutex;
+use iced_runtime::core::Size;
+use iced_renderer::Backend;
+use iced_wgpu::graphics::Viewport;
 
 use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};
 
@@ -52,23 +52,9 @@ pub(crate) fn extract_iced_data(
     ));
 }
 
-pub struct IcedNode {
-    staging_belt: Mutex<StagingBelt>,
-}
-
-impl IcedNode {
-    pub fn new() -> Self {
-        Self {
-            staging_belt: Mutex::new(StagingBelt::new(5 * 1024)),
-        }
-    }
-}
+pub struct IcedNode;
 
 impl Node for IcedNode {
-    fn update(&mut self, _world: &mut World) {
-        self.staging_belt.lock().unwrap().recall()
-    }
-
     fn run(
         &self,
         _graph: &mut RenderGraphContext,
@@ -86,6 +72,7 @@ impl Node for IcedNode {
             renderer, debug, ..
         } = &mut *world.resource::<IcedResource>().lock().unwrap();
         let render_device = world.resource::<RenderDevice>();
+        let queue = world.resource::<RenderQueue>();
 
         if !world
             .get_resource::<DidDrawBasic>()
@@ -96,24 +83,23 @@ impl Node for IcedNode {
         }
 
         let view = extracted_window.swap_chain_texture.as_ref().unwrap();
-        let staging_belt = &mut *self.staging_belt.lock().unwrap();
 
         let viewport = world.resource::<ViewportResource>();
         let device = render_device.wgpu_device();
 
         renderer.with_primitives(|backend, primitives| {
+            let Backend::Wgpu(ref mut backend) = backend else { return; };
             backend.present(
                 device,
-                staging_belt,
+                queue,
                 render_context.command_encoder(),
+                None,
                 view,
                 primitives,
                 viewport,
                 &debug.overlay(),
             );
         });
-
-        staging_belt.finish();
 
         Ok(())
     }

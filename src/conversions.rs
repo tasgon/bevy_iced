@@ -4,9 +4,10 @@ use bevy_input::prelude::MouseButton;
 use bevy_input::touch::{TouchInput, TouchPhase};
 #[cfg(feature = "touch")]
 use bevy_math::Vec2;
-use iced_native::keyboard::KeyCode as IcedKeyCode;
+use iced_runtime::keyboard::KeyCode as IcedKeyCode;
+use iced_runtime::core::mouse::Button as IcedMouseButton;
 #[cfg(feature = "touch")]
-use iced_native::{
+use iced_runtime::core::{
     touch::{self, Finger},
     Point,
 };
@@ -179,13 +180,12 @@ pub fn key_code(virtual_keycode: BevyKeyCode) -> IcedKeyCode {
     }
 }
 
-pub fn mouse_button(button: MouseButton) -> iced_native::mouse::Button {
-    use iced_native::mouse::Button;
+pub fn mouse_button(button: MouseButton) -> IcedMouseButton {
     match button {
-        MouseButton::Left => Button::Left,
-        MouseButton::Right => Button::Right,
-        MouseButton::Middle => Button::Middle,
-        MouseButton::Other(val) => Button::Other(val as u8),
+        MouseButton::Left => IcedMouseButton::Left,
+        MouseButton::Right => IcedMouseButton::Right,
+        MouseButton::Middle => IcedMouseButton::Middle,
+        MouseButton::Other(val) => IcedMouseButton::Other(val),
     }
 }
 

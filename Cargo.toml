@@ -25,8 +25,10 @@ bevy_render = "0.10"
 bevy_utils = "0.10"
 bevy_window = "0.10"
 
-iced_wgpu = "0.10"
-iced_native = "0.10"
+iced_renderer = { git = "https://github.com/focustense/iced.git", branch = "wgpu-downgrade-0.15.1", features = ["wgpu"] }
+iced_runtime = { git = "https://github.com/focustense/iced.git", branch = "wgpu-downgrade-0.15.1" }
+iced_style = { git = "https://github.com/focustense/iced.git", branch = "wgpu-downgrade-0.15.1" }
+iced_wgpu = { git = "https://github.com/focustense/iced.git", branch = "wgpu-downgrade-0.15.1" }
 
 [dev-dependencies]
 bevy = "0.10"

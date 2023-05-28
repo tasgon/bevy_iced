@@ -48,15 +48,19 @@ use bevy_ecs::system::{NonSendMut, Res, ResMut, Resource, SystemParam};
 use bevy_input::touch::Touches;
 use bevy_math::Vec2;
 use bevy_render::render_graph::RenderGraph;
-use bevy_render::renderer::RenderDevice;
+use bevy_render::renderer::{RenderDevice, RenderQueue};
 use bevy_render::{ExtractSchedule, RenderApp};
 use bevy_utils::HashMap;
 use bevy_window::{PrimaryWindow, Window};
-use iced::{user_interface, Element, UserInterface};
-pub use iced_native as iced;
-use iced_native::{Debug, Size};
+use iced::{user_interface, UserInterface};
+use iced_renderer::Backend;
+pub use iced_runtime as iced;
+use iced_runtime::core::{Element, Size};
+use iced_runtime::Debug;
+use iced_style::Theme;
 pub use iced_wgpu;
-use iced_wgpu::{wgpu, Viewport};
+use iced_wgpu::graphics::Viewport;
+use iced_wgpu::wgpu;
 
 mod conversions;
 mod render;
@@ -92,30 +96,35 @@ impl Plugin for IcedPlugin {
     }
 }
 
+type Renderer = iced_renderer::Renderer<Theme>;
+
 struct IcedProps {
-    renderer: iced_wgpu::Renderer,
-    debug: iced_native::Debug,
-    clipboard: iced_native::clipboard::Null,
+    renderer: Renderer,
+    debug: iced_runtime::Debug,
+    clipboard: iced_runtime::core::clipboard::Null,
 }
 
 impl IcedProps {
     fn new(app: &App) -> Self {
-        let device = app
-            .sub_app(RenderApp)
-            .world
+        let render_world = &app.sub_app(RenderApp).world;
+        let device = render_world
             .get_resource::<RenderDevice>()
             .unwrap()
             .wgpu_device();
+        let queue = render_world
+            .get_resource::<RenderQueue>()
+            .unwrap();
         let format = wgpu::TextureFormat::Bgra8UnormSrgb;
 
         Self {
-            renderer: iced_wgpu::Renderer::new(iced_wgpu::Backend::new(
+            renderer: Renderer::new(Backend::Wgpu(iced_wgpu::Backend::new(
                 device,
+                queue,
                 Default::default(),
                 format,
-            )),
+            ))),
             debug: Debug::new(),
-            clipboard: iced_native::clipboard::Null,
+            clipboard: iced_runtime::core::clipboard::Null,
         }
     }
 }
@@ -136,7 +145,7 @@ impl From<IcedProps> for IcedResource {
 }
 
 fn setup_pipeline(graph: &mut RenderGraph) {
-    graph.add_node(render::ICED_PASS, IcedNode::new());
+    graph.add_node(render::ICED_PASS, IcedNode);
 
     graph.add_node_edge(
         bevy_render::main_graph::node::CAMERA_DRIVER,
@@ -167,9 +176,9 @@ pub struct IcedSettings {
     /// Setting this to `None` defaults to using the `Window`s scale factor.
     pub scale_factor: Option<f64>,
     /// The theme to use for rendering Iced elements.
-    pub theme: iced_wgpu::Theme,
+    pub theme: iced_style::Theme,
     /// The style to use for rendering Iced elements.
-    pub style: iced_native::renderer::Style,
+    pub style: iced_runtime::core::renderer::Style,
 }
 
 impl IcedSettings {
@@ -183,9 +192,9 @@ impl Default for IcedSettings {
     fn default() -> Self {
         Self {
             scale_factor: None,
-            theme: iced_wgpu::Theme::Dark,
-            style: iced_native::renderer::Style {
-                text_color: iced_native::Color::WHITE,
+            theme: iced_style::Theme::Dark,
+            style: iced_runtime::core::renderer::Style {
+                text_color: iced_runtime::core::Color::WHITE,
             },
         }
     }
@@ -221,7 +230,7 @@ pub struct IcedContext<'w, 's, Message: Event> {
 
 impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
     /// Display an [`Element`] to the screen.
-    pub fn display<'a>(&'a mut self, element: impl Into<Element<'a, M, iced_wgpu::Renderer>>) {
+    pub fn display<'a>(&'a mut self, element: impl Into<Element<'a, M, Renderer>>) {
         let IcedProps {
             ref mut renderer,
             ref mut clipboard,
@@ -236,12 +245,12 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
 
             window
                 .cursor_position()
-                .map(|Vec2 { x, y }| iced_native::Point {
+                .map(|Vec2 { x, y }| iced_runtime::core::Point {
                     x: x * bounds.width / window.width(),
                     y: (window.height() - y) * bounds.height / window.height(),
                 })
                 .or_else(|| process_touch_input(self))
-                .unwrap_or(iced_native::Point::ORIGIN)
+                .unwrap_or(iced_runtime::core::Point::ORIGIN)
         };
 
         let mut messages = Vec::<M>::new();
@@ -274,7 +283,7 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
 
 #[cfg(feature = "touch")]
 /// To correctly process input as last resort events are used
-fn process_touch_input<M: Event>(context: &IcedContext<M>) -> Option<iced_native::Point> {
+fn process_touch_input<M: Event>(context: &IcedContext<M>) -> Option<iced_runtime::core::Point> {
     context
         .touches
         .first_pressed_position()
@@ -283,16 +292,16 @@ fn process_touch_input<M: Event>(context: &IcedContext<M>) -> Option<iced_native
             .iter_just_released()
             .map(|touch| touch.position())
             .next())
-        .map(|Vec2 { x, y }| iced_native::Point { x, y })
+        .map(|Vec2 { x, y }| iced_runtime::core::Point { x, y })
         .or(context
             .events
             .iter()
             .filter_map(|ev| {
-                if let iced_native::Event::Touch(
-                    iced_native::touch::Event::FingerLifted { position, .. }
-                    | iced_native::touch::Event::FingerLost { position, .. }
-                    | iced_native::touch::Event::FingerMoved { position, .. }
-                    | iced_native::touch::Event::FingerPressed { position, .. },
+                if let iced_runtime::core::Event::Touch(
+                    iced_runtime::core::touch::Event::FingerLifted { position, .. }
+                    | iced_runtime::core::touch::Event::FingerLost { position, .. }
+                    | iced_runtime::core::touch::Event::FingerMoved { position, .. }
+                    | iced_runtime::core::touch::Event::FingerPressed { position, .. },
                 ) = ev
                 {
                     Some(position)
@@ -305,6 +314,6 @@ fn process_touch_input<M: Event>(context: &IcedContext<M>) -> Option<iced_native
 }
 
 #[cfg(not(feature = "touch"))]
-fn process_touch_input<M: Event>(_: &IcedContext<M>) -> Option<iced_native::Point> {
+fn process_touch_input<M: Event>(_: &IcedContext<M>) -> Option<iced_runtime::core::Point> {
     None
 }
