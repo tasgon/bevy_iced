@@ -4,10 +4,9 @@ use bevy_ecs::{
     system::{Commands, Res, Resource},
     world::World,
 };
-use bevy_render::renderer::{RenderDevice, RenderQueue};
 use bevy_render::{
     render_graph::{Node, NodeRunError, RenderGraphContext},
-    renderer::RenderContext,
+    renderer::{RenderContext, RenderDevice, RenderQueue},
     view::ExtractedWindows,
     Extract,
 };

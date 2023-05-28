@@ -4,11 +4,10 @@ use bevy_ecs::{
     prelude::EventReader,
     system::{Res, ResMut, Resource, SystemParam},
 };
-use bevy_input::keyboard::KeyCode;
 #[cfg(feature = "touch")]
 use bevy_input::touch::TouchInput;
 use bevy_input::{
-    keyboard::KeyboardInput,
+    keyboard::{KeyCode, KeyboardInput},
     mouse::{MouseButtonInput, MouseWheel},
     ButtonState, Input,
 };
