@@ -12,7 +12,6 @@ use bevy_render::{
 };
 use bevy_window::Window;
 use iced_runtime::core::Size;
-use iced_renderer::Backend;
 use iced_wgpu::graphics::Viewport;
 
 use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};
@@ -81,13 +80,13 @@ impl Node for IcedNode {
             return Ok(());
         }
 
-        let view = extracted_window.swap_chain_texture.as_ref().unwrap();
+        let view = extracted_window.swap_chain_texture_view.as_ref().unwrap();
 
         let viewport = world.resource::<ViewportResource>();
         let device = render_device.wgpu_device();
 
+        let iced_renderer::Renderer::Wgpu(renderer) = renderer else { return Ok(()); };
         renderer.with_primitives(|backend, primitives| {
-            let Backend::Wgpu(ref mut backend) = backend else { return; };
             backend.present(
                 device,
                 queue,

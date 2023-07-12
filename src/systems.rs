@@ -32,16 +32,16 @@ pub struct InputEvents<'w, 's> {
 
 fn compute_modifiers(input_map: &Input<KeyCode>) -> keyboard::Modifiers {
     let mut modifiers = keyboard::Modifiers::default();
-    if input_map.any_pressed([KeyCode::LControl, KeyCode::RControl]) {
+    if input_map.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
         modifiers |= keyboard::Modifiers::CTRL;
     }
-    if input_map.any_pressed([KeyCode::LShift, KeyCode::RShift]) {
+    if input_map.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
         modifiers |= keyboard::Modifiers::SHIFT;
     }
-    if input_map.any_pressed([KeyCode::LAlt, KeyCode::RAlt]) {
+    if input_map.any_pressed([KeyCode::AltLeft, KeyCode::AltRight]) {
         modifiers |= keyboard::Modifiers::ALT;
     }
-    if input_map.any_pressed([KeyCode::LWin, KeyCode::RWin]) {
+    if input_map.any_pressed([KeyCode::SuperLeft, KeyCode::SuperRight]) {
         modifiers |= keyboard::Modifiers::LOGO;
     }
     modifiers
@@ -93,14 +93,14 @@ pub fn process_input(
             use keyboard::Event::*;
             let modifiers = compute_modifiers(&input_map);
             let event = match code {
-                KeyCode::LControl
-                | KeyCode::RControl
-                | KeyCode::LShift
-                | KeyCode::RShift
-                | KeyCode::LAlt
-                | KeyCode::RAlt
-                | KeyCode::LWin
-                | KeyCode::RWin => ModifiersChanged(modifiers),
+                KeyCode::ControlLeft
+                | KeyCode::ControlRight
+                | KeyCode::ShiftLeft
+                | KeyCode::ShiftRight
+                | KeyCode::AltLeft
+                | KeyCode::AltRight
+                | KeyCode::SuperLeft
+                | KeyCode::SuperRight => ModifiersChanged(modifiers),
                 code => {
                     let key_code = conversions::key_code(code);
                     if ev.state.is_pressed() {
