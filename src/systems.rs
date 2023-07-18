@@ -13,10 +13,10 @@ use bevy_input::{
     ButtonState, Input,
 };
 use bevy_window::{CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter};
-use iced_native::{keyboard, mouse, Event as IcedEvent, Point};
+use iced::{keyboard, mouse, Event as IcedEvent, Point};
 
 #[derive(Resource, Deref, DerefMut, Default)]
-pub struct IcedEventQueue(Vec<iced_native::Event>);
+pub struct IcedEventQueue(Vec<iced::Event>);
 
 #[derive(SystemParam)]
 pub struct InputEvents<'w, 's> {
@@ -33,16 +33,16 @@ pub struct InputEvents<'w, 's> {
 
 fn compute_modifiers(input_map: &Input<KeyCode>) -> keyboard::Modifiers {
     let mut modifiers = keyboard::Modifiers::default();
-    if input_map.any_pressed([KeyCode::LControl, KeyCode::RControl]) {
+    if input_map.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
         modifiers |= keyboard::Modifiers::CTRL;
     }
-    if input_map.any_pressed([KeyCode::LShift, KeyCode::RShift]) {
+    if input_map.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]) {
         modifiers |= keyboard::Modifiers::SHIFT;
     }
-    if input_map.any_pressed([KeyCode::LAlt, KeyCode::RAlt]) {
+    if input_map.any_pressed([KeyCode::AltLeft, KeyCode::AltRight]) {
         modifiers |= keyboard::Modifiers::ALT;
     }
-    if input_map.any_pressed([KeyCode::LWin, KeyCode::RWin]) {
+    if input_map.any_pressed([KeyCode::SuperLeft, KeyCode::SuperRight]) {
         modifiers |= keyboard::Modifiers::LOGO;
     }
     modifiers
@@ -64,28 +64,28 @@ pub fn process_input(
     for ev in events.mouse_button.iter() {
         let button = conversions::mouse_button(ev.button);
         event_queue.push(IcedEvent::Mouse(match ev.state {
-            ButtonState::Pressed => iced_native::mouse::Event::ButtonPressed(button),
-            ButtonState::Released => iced_native::mouse::Event::ButtonReleased(button),
+            ButtonState::Pressed => iced::mouse::Event::ButtonPressed(button),
+            ButtonState::Released => iced::mouse::Event::ButtonReleased(button),
         }))
     }
 
     for _ev in events.cursor_entered.iter() {
-        event_queue.push(IcedEvent::Mouse(iced_native::mouse::Event::CursorEntered));
+        event_queue.push(IcedEvent::Mouse(iced::mouse::Event::CursorEntered));
     }
 
     for _ev in events.cursor_left.iter() {
-        event_queue.push(IcedEvent::Mouse(iced_native::mouse::Event::CursorLeft));
+        event_queue.push(IcedEvent::Mouse(iced::mouse::Event::CursorLeft));
     }
 
     for ev in events.mouse_wheel.iter() {
-        event_queue.push(IcedEvent::Mouse(iced_native::mouse::Event::WheelScrolled {
+        event_queue.push(IcedEvent::Mouse(iced::mouse::Event::WheelScrolled {
             delta: mouse::ScrollDelta::Pixels { x: ev.x, y: ev.y },
         }));
     }
 
     for ev in events.received_character.iter() {
         event_queue.push(IcedEvent::Keyboard(
-            iced_native::keyboard::Event::CharacterReceived(ev.char),
+            iced::keyboard::Event::CharacterReceived(ev.char),
         ));
     }
 
@@ -94,14 +94,14 @@ pub fn process_input(
             use keyboard::Event::*;
             let modifiers = compute_modifiers(&input_map);
             let event = match code {
-                KeyCode::LControl
-                | KeyCode::RControl
-                | KeyCode::LShift
-                | KeyCode::RShift
-                | KeyCode::LAlt
-                | KeyCode::RAlt
-                | KeyCode::LWin
-                | KeyCode::RWin => ModifiersChanged(modifiers),
+                KeyCode::ControlLeft
+                | KeyCode::ControlRight
+                | KeyCode::ShiftLeft
+                | KeyCode::ShiftRight
+                | KeyCode::AltLeft
+                | KeyCode::AltRight
+                | KeyCode::SuperLeft
+                | KeyCode::SuperRight => ModifiersChanged(modifiers),
                 code => {
                     let key_code = conversions::key_code(code);
                     if ev.state.is_pressed() {

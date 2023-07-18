@@ -16,18 +16,21 @@ documentation = "https://docs.rs/bevy_iced"
 touch = []
 
 [dependencies]
-bevy_app = "0.10"
-bevy_derive = "0.10"
-bevy_ecs = "0.10"
-bevy_input = "0.10"
-bevy_math = "0.10"
-bevy_render = "0.10"
-bevy_utils = "0.10"
-bevy_window = "0.10"
+bevy_app = "0.11"
+bevy_derive = "0.11"
+bevy_ecs = "0.11"
+bevy_input = "0.11"
+bevy_math = "0.11"
+bevy_render = "0.11"
+bevy_utils = "0.11"
+bevy_window = "0.11"
 
-iced_wgpu = "0.10"
-iced_native = "0.10"
+iced = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
+iced_core = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
+iced_runtime = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
+iced_wgpu = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
+iced_winit = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
 
 [dev-dependencies]
-bevy = "0.10"
+bevy = "0.11"
 rand = "0.8"
