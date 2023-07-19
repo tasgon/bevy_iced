@@ -3,10 +3,12 @@ use bevy::{
     input::mouse::{MouseButtonInput, MouseWheel},
     prelude::*,
 };
-use bevy_iced::{
+use bevy_iced::iced::{
+    self,
     widget::{slider, text, text_input, Button, Column, Row},
-    Alignment, IcedContext, IcedPlugin, IcedSettings,
+    Alignment,
 };
+use bevy_iced::{IcedContext, IcedPlugin, IcedSettings, IcedStyle};
 use rand::random as rng;
 
 #[derive(Clone, Event)]
@@ -35,7 +37,7 @@ pub fn main() {
             ..Default::default()
         }))
         .add_plugins((
-            IcedPlugin,
+            IcedPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
             LogDiagnosticsPlugin::default(),
         ))
@@ -47,10 +49,11 @@ pub fn main() {
         })
         .insert_resource(IcedSettings {
             scale_factor: None,
-            theme: bevy_iced::Theme::Light,
-            style: bevy_iced::Style {
-                text_color: bevy_iced::Color::from_rgb(0.0, 1.0, 1.0),
+            theme: iced::Theme::Light,
+            style: IcedStyle {
+                text_color: iced::Color::from_rgb(0.0, 1.0, 1.0),
             },
+            ..Default::default()
         })
         .add_systems(Startup, build_program)
         .add_systems(

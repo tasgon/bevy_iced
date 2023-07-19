@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_iced::widget::text;
+use bevy_iced::iced::widget::text;
 use bevy_iced::{IcedContext, IcedPlugin};
 
 #[derive(Event)]
@@ -8,7 +8,7 @@ pub enum UiMessage {}
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(IcedPlugin)
+        .add_plugins(IcedPlugin::default())
         .add_event::<UiMessage>()
         .add_systems(Update, ui_system)
         .run();

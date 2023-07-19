@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_iced::widget::text;
+use bevy_iced::iced::widget::text;
 use bevy_iced::{IcedContext, IcedPlugin};
 use bevy_input::keyboard::KeyboardInput;
 use bevy_input::ButtonState;
@@ -13,7 +13,7 @@ pub struct UiActive(bool);
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(IcedPlugin)
+        .add_plugins(IcedPlugin::default())
         .add_event::<UiMessage>()
         .insert_resource(UiActive(true))
         .add_systems(Update, toggle_system)

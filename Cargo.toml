@@ -27,6 +27,7 @@ bevy_window = "0.11"
 
 iced = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
 iced_core = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
+iced_graphics = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
 iced_runtime = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
 iced_wgpu = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
 iced_winit = { git = "https://github.com/iced-rs/iced.git", rev = "5dd9234" }
