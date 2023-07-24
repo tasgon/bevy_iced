@@ -106,6 +106,9 @@ impl IcedProps {
             .get_resource::<RenderDevice>()
             .unwrap()
             .wgpu_device();
+        #[cfg(target_arch = "wasm32")]
+        let format = wgpu::TextureFormat::Rgba8UnormSrgb;
+        #[cfg(not(target_arch = "wasm32"))]
         let format = wgpu::TextureFormat::Bgra8UnormSrgb;
 
         Self {
