@@ -56,6 +56,7 @@ use iced_runtime::user_interface::UserInterface;
 use iced_winit::Viewport;
 
 pub use iced;
+pub use iced_wgpu;
 pub use iced_core::renderer::Style as IcedStyle;
 pub use iced_graphics::Antialiasing as IcedAntialiasing;
 
