@@ -34,6 +34,7 @@
 
 use std::any::{Any, TypeId};
 
+use std::borrow::Cow;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -52,13 +53,14 @@ use bevy_render::{ExtractSchedule, RenderApp};
 use bevy_utils::HashMap;
 use bevy_window::{PrimaryWindow, Window};
 use iced::mouse::Cursor;
+use iced_graphics::backend::Text;
 use iced_runtime::user_interface::UserInterface;
 use iced_winit::Viewport;
 
 pub use iced;
-pub use iced_wgpu;
 pub use iced_core::renderer::Style as IcedStyle;
 pub use iced_graphics::Antialiasing as IcedAntialiasing;
+pub use iced_wgpu;
 
 mod conversions;
 mod render;
@@ -77,6 +79,8 @@ pub struct IcedPlugin {
     ///
     /// By default, it is `None`.
     pub antialiasing: Option<IcedAntialiasing>,
+    /// Font file contents
+    pub fonts: Vec<&'static [u8]>,
 }
 
 impl Default for IcedPlugin {
@@ -85,6 +89,7 @@ impl Default for IcedPlugin {
             default_font: iced::Font::default(),
             default_text_size: iced_wgpu::Settings::default().default_text_size,
             antialiasing: None,
+            fonts: vec![],
         }
     }
 }
@@ -106,6 +111,7 @@ impl Plugin for IcedPlugin {
             self.default_font,
             self.default_text_size,
             self.antialiasing,
+            &self.fonts,
         )
         .into();
 
@@ -133,6 +139,7 @@ impl IcedProps {
         default_font: iced::Font,
         default_text_size: f32,
         antialiasing: Option<IcedAntialiasing>,
+        fonts: &Vec<&'static [u8]>,
     ) -> Self {
         let render_world = &app.sub_app(RenderApp).world;
         let device = render_world
@@ -147,15 +154,15 @@ impl IcedProps {
             antialiasing,
             ..Default::default()
         };
-        let debug = iced_runtime::Debug::new();
-        let clipboard = iced_core::clipboard::Null;
+        let mut backend = iced_wgpu::Backend::new(device, queue, settings, format);
+        for font in fonts {
+            backend.load_font(Cow::Borrowed(*font));
+        }
 
         Self {
-            renderer: iced_wgpu::Renderer::new(iced_wgpu::Backend::new(
-                device, queue, settings, format,
-            )),
-            debug,
-            clipboard,
+            renderer: iced_wgpu::Renderer::new(backend),
+            debug: iced_runtime::Debug::new(),
+            clipboard: iced_core::clipboard::Null,
         }
     }
 }
