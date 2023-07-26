@@ -237,19 +237,18 @@ impl<'w, 's, M: Event> IcedContext<'w, 's, M> {
         let cursor_position = {
             let window = self.windows.single();
 
-            window
-                .cursor_position()
-                .map(|Vec2 { x, y }| iced_native::Point {
+            process_touch_input(self)
+                .map(|iced_native::Point { x, y }| iced_native::Point {
                     x: x * bounds.width / window.width(),
-                    y: (window.height() - y) * bounds.height / window.height(),
+                    y: y * bounds.height / window.height(),
                 })
                 .or_else(|| {
-                    process_touch_input(self).map(|iced_native::Point { x, y }| {
-                        iced_native::Point {
+                    window
+                        .cursor_position()
+                        .map(|Vec2 { x, y }| iced_native::Point {
                             x: x * bounds.width / window.width(),
-                            y: y * bounds.height / window.height(),
-                        }
-                    })
+                            y: (window.height() - y) * bounds.height / window.height(),
+                        })
                 })
                 .unwrap_or(iced_native::Point::ORIGIN)
         };
