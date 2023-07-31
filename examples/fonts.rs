@@ -1,9 +1,13 @@
 use bevy::prelude::*;
-use bevy_iced::iced::{Font, widget::{text, column}};
+use bevy_iced::iced::{
+    widget::{column, text},
+    Font,
+};
 use bevy_iced::{IcedContext, IcedPlugin};
 
 static ALPHAPROTA_FONT_BYTES: &'static [u8] = include_bytes!("../assets/fonts/AlphaProta.ttf");
-static RAINBOW2000_FONT_BYTES: &'static [u8] = include_bytes!("../assets/fonts/Rainbow2000-Regular.ttf");
+static RAINBOW2000_FONT_BYTES: &'static [u8] =
+    include_bytes!("../assets/fonts/Rainbow2000-Regular.ttf");
 
 const ALPHAPROTA_FONT: Font = Font::with_name("Alpha Prota");
 const RAINBOW2000_FONT: Font = Font::with_name("Rainbow 2000");
