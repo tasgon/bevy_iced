@@ -1,5 +1,3 @@
-use std::{fs, io};
-
 use bevy::prelude::*;
 use bevy_iced::iced::{
     font,
@@ -9,15 +7,16 @@ use bevy_iced::iced::{
 use bevy_iced::{iced, IcedContext, IcedPlugin};
 
 const ALPHAPROTA_FONT: Font = Font::with_name("Alpha Prota");
+const ALPHAPROTA_FONT_BYTES: &'static [u8] = include_bytes!("../assets/fonts/AlphaProta.ttf");
 
 #[derive(Event)]
 pub enum UiMessage {}
 
-pub fn main() -> io::Result<()> {
+pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(IcedPlugin {
-            fonts: vec![fs::read("assets/fonts/AlphaProta.ttf")?.leak()],
+            fonts: vec![ALPHAPROTA_FONT_BYTES],
             settings: iced::Settings {
                 default_text_size: 40.0,
                 default_font: ALPHAPROTA_FONT,
@@ -27,8 +26,6 @@ pub fn main() -> io::Result<()> {
         .add_event::<UiMessage>()
         .add_systems(Update, ui_system)
         .run();
-
-    Ok(())
 }
 
 fn ui_system(mut ctx: IcedContext<UiMessage>) {
