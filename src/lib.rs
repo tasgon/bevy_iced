@@ -47,9 +47,9 @@ use bevy_render::{ExtractSchedule, RenderApp};
 use bevy_utils::HashMap;
 use bevy_window::{PrimaryWindow, Window};
 use iced_core::mouse::Cursor;
+use iced_runtime::user_interface::UserInterface;
 use iced_widget::graphics::backend::Text;
 use iced_widget::graphics::Viewport;
-use iced_runtime::user_interface::UserInterface;
 
 /// Basic re-exports for all Iced-related stuff.
 ///
