@@ -35,7 +35,7 @@ See the [examples](https://github.com/tasgon/bevy_iced/tree/master/examples) and
 
 |Bevy Version  |Crate Version  |
 |--------------|---------------|
-|`0.11`        |`master`       |
+|`0.11`        |`0.4`, `master`|
 |`0.10`        |`0.3`,         |
 |`0.9`         |`0.2`          |
 |`0.7`         |`0.1`          |
@@ -48,3 +48,4 @@ See the [examples](https://github.com/tasgon/bevy_iced/tree/master/examples) and
 ## Credits
 
 - [`bevy_egui`](https://github.com/mvlabat/bevy_egui) for giving me a useful starting point to do this
+- [Joonas Satka](https://github.com/jsatka) for helping me port to Bevy 0.11

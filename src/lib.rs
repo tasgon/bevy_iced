@@ -24,10 +24,6 @@
 //!     )));
 //! }
 //! ```
-//!
-//! ## Feature flags
-//!
-//! - `touch`: Enables touch input. Is not exclude input from the mouse.
 
 #![deny(unsafe_code)]
 #![deny(missing_docs)]
@@ -159,9 +155,8 @@ fn setup_pipeline(graph: &mut RenderGraph) {
     );
 }
 
-#[doc(hidden)]
 #[derive(Default)]
-pub struct IcedCache {
+struct IcedCache {
     cache: HashMap<TypeId, Option<iced_runtime::user_interface::Cache>>,
 }
 
