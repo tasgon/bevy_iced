@@ -4,6 +4,7 @@ use bevy_iced::{IcedContext, IcedPlugin};
 use bevy_input::keyboard::KeyboardInput;
 use bevy_input::ButtonState;
 
+#[derive(Event)]
 pub enum UiMessage {}
 
 #[derive(Resource, PartialEq, Eq)]
@@ -12,11 +13,11 @@ pub struct UiActive(bool);
 pub fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(IcedPlugin)
+        .add_plugins(IcedPlugin::default())
         .add_event::<UiMessage>()
         .insert_resource(UiActive(true))
-        .add_system(toggle_system)
-        .add_system(ui_system.run_if(resource_equals(UiActive(true))))
+        .add_systems(Update, toggle_system)
+        .add_systems(Update, ui_system.run_if(resource_equals(UiActive(true))))
         .run();
 }
 

@@ -3,13 +3,15 @@ use bevy::{
     input::mouse::{MouseButtonInput, MouseWheel},
     prelude::*,
 };
-use bevy_iced::{
-    iced::widget::{slider, text, text_input, Button, Column, Row},
-    IcedContext, IcedPlugin, IcedSettings,
+use bevy_iced::iced::{
+    self,
+    widget::{slider, text, text_input, Button, Column, Row},
+    Alignment, Style,
 };
+use bevy_iced::{IcedContext, IcedPlugin, IcedSettings};
 use rand::random as rng;
 
-#[derive(Clone)]
+#[derive(Clone, Event)]
 enum UiMessage {
     BoxRequested,
     Scale(f32),
@@ -34,9 +36,11 @@ pub fn main() {
             }),
             ..Default::default()
         }))
-        .add_plugin(IcedPlugin)
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(LogDiagnosticsPlugin::default())
+        .add_plugins((
+            IcedPlugin::default(),
+            FrameTimeDiagnosticsPlugin::default(),
+            LogDiagnosticsPlugin::default(),
+        ))
         .add_event::<UiMessage>()
         .insert_resource(UiActive(true))
         .insert_resource(UiData {
@@ -45,17 +49,17 @@ pub fn main() {
         })
         .insert_resource(IcedSettings {
             scale_factor: None,
-            theme: bevy_iced::iced_wgpu::Theme::Light,
-            style: bevy_iced::iced::renderer::Style {
-                text_color: bevy_iced::iced::Color::from_rgb(0.0, 1.0, 1.0),
+            theme: iced::Theme::Light,
+            style: Style {
+                text_color: iced::Color::from_rgb(0.0, 1.0, 1.0),
             },
+            ..Default::default()
         })
-        .add_startup_system(build_program)
-        .add_system(tick)
-        .add_system(box_system)
-        .add_system(update_scale_factor)
-        .add_system(toggle_ui)
-        .add_system(ui_system)
+        .add_systems(Startup, build_program)
+        .add_systems(
+            Update,
+            (tick, box_system, update_scale_factor, toggle_ui, ui_system),
+        )
         .run();
 }
 
@@ -137,7 +141,7 @@ fn ui_system(
 
     let row = Row::new()
         .spacing(10)
-        .align_items(iced_native::Alignment::Center)
+        .align_items(Alignment::Center)
         .push(Button::new(text("Request box")).on_press(UiMessage::BoxRequested))
         .push(text(format!(
             "{} boxes (amplitude: {})",
@@ -146,7 +150,7 @@ fn ui_system(
         )));
     let edit = text_input("", &data.text).on_input(UiMessage::Text);
     let column = Column::new()
-        .align_items(iced_native::Alignment::Center)
+        .align_items(Alignment::Center)
         .spacing(10)
         .push(edit)
         .push(slider(0.0..=100.0, data.scale, UiMessage::Scale))

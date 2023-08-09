@@ -1,15 +1,12 @@
-use bevy_input::prelude::KeyCode as BevyKeyCode;
-use bevy_input::prelude::MouseButton;
-#[cfg(feature = "touch")]
-use bevy_input::touch::{TouchInput, TouchPhase};
-#[cfg(feature = "touch")]
-use bevy_math::Vec2;
-use iced_native::keyboard::KeyCode as IcedKeyCode;
-#[cfg(feature = "touch")]
-use iced_native::{
+use crate::iced::{
     touch::{self, Finger},
     Point,
 };
+use bevy_input::prelude::KeyCode as BevyKeyCode;
+use bevy_input::prelude::MouseButton;
+use bevy_input::touch::{TouchInput, TouchPhase};
+use bevy_math::Vec2;
+use iced_core::keyboard::KeyCode as IcedKeyCode;
 
 pub fn key_code(virtual_keycode: BevyKeyCode) -> IcedKeyCode {
     match virtual_keycode {
@@ -123,11 +120,11 @@ pub fn key_code(virtual_keycode: BevyKeyCode) -> IcedKeyCode {
         BevyKeyCode::Grave => IcedKeyCode::Grave,
         BevyKeyCode::Kana => IcedKeyCode::Kana,
         BevyKeyCode::Kanji => IcedKeyCode::Kanji,
-        BevyKeyCode::LAlt => IcedKeyCode::LAlt,
-        BevyKeyCode::LBracket => IcedKeyCode::LBracket,
-        BevyKeyCode::LControl => IcedKeyCode::LControl,
-        BevyKeyCode::LShift => IcedKeyCode::LShift,
-        BevyKeyCode::LWin => IcedKeyCode::LWin,
+        BevyKeyCode::AltLeft => IcedKeyCode::LAlt,
+        BevyKeyCode::BracketLeft => IcedKeyCode::LBracket,
+        BevyKeyCode::ControlLeft => IcedKeyCode::LControl,
+        BevyKeyCode::ShiftLeft => IcedKeyCode::LShift,
+        BevyKeyCode::SuperLeft => IcedKeyCode::LWin,
         BevyKeyCode::Mail => IcedKeyCode::Mail,
         BevyKeyCode::MediaSelect => IcedKeyCode::MediaSelect,
         BevyKeyCode::MediaStop => IcedKeyCode::MediaStop,
@@ -147,11 +144,11 @@ pub fn key_code(virtual_keycode: BevyKeyCode) -> IcedKeyCode {
         BevyKeyCode::PlayPause => IcedKeyCode::PlayPause,
         BevyKeyCode::Power => IcedKeyCode::Power,
         BevyKeyCode::PrevTrack => IcedKeyCode::PrevTrack,
-        BevyKeyCode::RAlt => IcedKeyCode::RAlt,
-        BevyKeyCode::RBracket => IcedKeyCode::RBracket,
-        BevyKeyCode::RControl => IcedKeyCode::RControl,
-        BevyKeyCode::RShift => IcedKeyCode::RShift,
-        BevyKeyCode::RWin => IcedKeyCode::RWin,
+        BevyKeyCode::AltRight => IcedKeyCode::RAlt,
+        BevyKeyCode::BracketRight => IcedKeyCode::RBracket,
+        BevyKeyCode::ControlRight => IcedKeyCode::RControl,
+        BevyKeyCode::ShiftRight => IcedKeyCode::RShift,
+        BevyKeyCode::SuperRight => IcedKeyCode::RWin,
         BevyKeyCode::Semicolon => IcedKeyCode::Semicolon,
         BevyKeyCode::Slash => IcedKeyCode::Slash,
         BevyKeyCode::Sleep => IcedKeyCode::Sleep,
@@ -179,17 +176,16 @@ pub fn key_code(virtual_keycode: BevyKeyCode) -> IcedKeyCode {
     }
 }
 
-pub fn mouse_button(button: MouseButton) -> iced_native::mouse::Button {
-    use iced_native::mouse::Button;
+pub fn mouse_button(button: MouseButton) -> iced_core::mouse::Button {
+    use iced_core::mouse::Button;
     match button {
         MouseButton::Left => Button::Left,
         MouseButton::Right => Button::Right,
         MouseButton::Middle => Button::Middle,
-        MouseButton::Other(val) => Button::Other(val as u8),
+        MouseButton::Other(val) => Button::Other(val),
     }
 }
 
-#[cfg(feature = "touch")]
 pub fn touch_event(bevy_touch_input: &TouchInput) -> touch::Event {
     match *bevy_touch_input {
         TouchInput {
@@ -202,7 +198,7 @@ pub fn touch_event(bevy_touch_input: &TouchInput) -> touch::Event {
             position: Point { x, y },
         },
         TouchInput {
-            phase: TouchPhase::Cancelled,
+            phase: TouchPhase::Canceled,
             position: Vec2 { x, y },
             id: finger,
             ..

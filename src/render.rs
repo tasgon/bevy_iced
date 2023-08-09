@@ -4,7 +4,7 @@ use bevy_ecs::{
     system::{Commands, Res, Resource},
     world::World,
 };
-use bevy_render::renderer::RenderDevice;
+use bevy_render::renderer::{RenderDevice, RenderQueue};
 use bevy_render::{
     render_graph::{Node, NodeRunError, RenderGraphContext},
     renderer::RenderContext,
@@ -12,8 +12,9 @@ use bevy_render::{
     Extract,
 };
 use bevy_window::Window;
-use iced_native::Size;
-use iced_wgpu::{wgpu::util::StagingBelt, Viewport};
+use iced_core::Size;
+use iced_graphics::Viewport;
+use iced_wgpu::wgpu::util::StagingBelt;
 use std::sync::Mutex;
 
 use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};
@@ -80,12 +81,17 @@ impl Node for IcedNode {
             .unwrap()
             .windows
             .values()
-            .next() else { return Ok(()) };
+            .next()
+        else {
+            return Ok(());
+        };
 
         let IcedProps {
             renderer, debug, ..
         } = &mut *world.resource::<IcedResource>().lock().unwrap();
-        let render_device = world.resource::<RenderDevice>();
+        let render_device = world.resource::<RenderDevice>().wgpu_device();
+        let render_queue = world.resource::<RenderQueue>();
+        let viewport = world.resource::<ViewportResource>();
 
         if !world
             .get_resource::<DidDrawBasic>()
@@ -94,18 +100,15 @@ impl Node for IcedNode {
         {
             return Ok(());
         }
-
-        let view = extracted_window.swap_chain_texture.as_ref().unwrap();
+        let view = extracted_window.swap_chain_texture_view.as_ref().unwrap();
         let staging_belt = &mut *self.staging_belt.lock().unwrap();
-
-        let viewport = world.resource::<ViewportResource>();
-        let device = render_device.wgpu_device();
 
         renderer.with_primitives(|backend, primitives| {
             backend.present(
-                device,
-                staging_belt,
+                render_device,
+                render_queue,
                 render_context.command_encoder(),
+                None,
                 view,
                 primitives,
                 viewport,
