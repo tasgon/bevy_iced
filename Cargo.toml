@@ -12,9 +12,6 @@ documentation = "https://docs.rs/bevy_iced"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[features]
-touch = []
-
 [dependencies]
 bevy_app = "0.11"
 bevy_derive = "0.11"

@@ -5,7 +5,6 @@ use bevy_ecs::{
     system::{Res, ResMut, Resource, SystemParam},
 };
 use bevy_input::keyboard::KeyCode;
-#[cfg(feature = "touch")]
 use bevy_input::touch::TouchInput;
 use bevy_input::{
     keyboard::KeyboardInput,
@@ -27,7 +26,6 @@ pub struct InputEvents<'w, 's> {
     mouse_wheel: EventReader<'w, 's, MouseWheel>,
     received_character: EventReader<'w, 's, ReceivedCharacter>,
     keyboard_input: EventReader<'w, 's, KeyboardInput>,
-    #[cfg(feature = "touch")]
     touch_input: EventReader<'w, 's, TouchInput>,
 }
 
@@ -122,7 +120,6 @@ pub fn process_input(
         }
     }
 
-    #[cfg(feature = "touch")]
     for ev in events.touch_input.iter() {
         event_queue.push(IcedEvent::Touch(conversions::touch_event(ev)));
     }

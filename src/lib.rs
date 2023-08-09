@@ -44,9 +44,7 @@ use bevy_app::{App, Plugin, Update};
 use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::prelude::{EventWriter, Query, With};
 use bevy_ecs::system::{NonSendMut, Res, ResMut, Resource, SystemParam};
-#[cfg(feature = "touch")]
 use bevy_input::touch::Touches;
-use bevy_math::Vec2;
 use bevy_render::render_graph::RenderGraph;
 use bevy_render::renderer::{RenderDevice, RenderQueue};
 use bevy_render::{ExtractSchedule, RenderApp};
@@ -58,11 +56,15 @@ use iced_graphics::Viewport;
 use iced_runtime::user_interface::UserInterface;
 
 /// Basic re-exports for all Iced-related stuff.
+///
+/// This module attempts to emulate the `iced` package's API
+/// as much as possible.
 pub mod iced;
 
 mod conversions;
 mod render;
 mod systems;
+mod utils;
 
 use systems::IcedEventQueue;
 
@@ -71,20 +73,12 @@ pub type Renderer = iced_wgpu::Renderer<iced::Theme>;
 
 /// The main feature of `bevy_iced`.
 /// Add this to your [`App`] by calling `app.add_plugin(bevy_iced::IcedPlugin::default())`.
+#[derive(Default)]
 pub struct IcedPlugin {
-    /// The settings that Iced should used.
-    pub settings: iced_wgpu::Settings,
+    /// The settings that Iced should use.
+    pub settings: iced::Settings,
     /// Font file contents
     pub fonts: Vec<&'static [u8]>,
-}
-
-impl Default for IcedPlugin {
-    fn default() -> Self {
-        Self {
-            settings: Default::default(),
-            fonts: vec![],
-        }
-    }
 }
 
 impl Plugin for IcedPlugin {
@@ -236,7 +230,6 @@ pub struct IcedContext<'w, 's, Message: bevy_ecs::event::Event> {
     cache_map: NonSendMut<'w, IcedCache>,
     messages: EventWriter<'w, Message>,
     did_draw: ResMut<'w, DidDraw>,
-    #[cfg(feature = "touch")]
     touches: Res<'w, Touches>,
 }
 
@@ -256,9 +249,9 @@ impl<'w, 's, M: bevy_ecs::event::Event> IcedContext<'w, 's, M> {
             let window = self.windows.single();
             match window.cursor_position() {
                 Some(position) => {
-                    Cursor::Available(process_cursor_position(position, bounds, window))
+                    Cursor::Available(utils::process_cursor_position(position, bounds, window))
                 }
-                None => process_touch_input(self)
+                None => utils::process_touch_input(self)
                     .map(Cursor::Available)
                     .unwrap_or(Cursor::Unavailable),
             }
@@ -285,52 +278,4 @@ impl<'w, 's, M: bevy_ecs::event::Event> IcedContext<'w, 's, M> {
         self.did_draw
             .store(true, std::sync::atomic::Ordering::Relaxed);
     }
-}
-
-fn process_cursor_position(
-    position: Vec2,
-    bounds: iced_core::Size,
-    window: &Window,
-) -> iced_core::Point {
-    iced_core::Point {
-        x: position.x * bounds.width / window.width(),
-        y: position.y * bounds.height / window.height(),
-    }
-}
-
-#[cfg(feature = "touch")]
-/// To correctly process input as last resort events are used
-fn process_touch_input<M: bevy_ecs::event::Event>(context: &IcedContext<M>) -> Option<iced::Point> {
-    context
-        .touches
-        .first_pressed_position()
-        .or(context
-            .touches
-            .iter_just_released()
-            .map(|touch| touch.position())
-            .next())
-        .map(|Vec2 { x, y }| iced::Point { x, y })
-        .or(context
-            .events
-            .iter()
-            .filter_map(|ev| {
-                if let iced::Event::Touch(
-                    iced::touch::Event::FingerLifted { position, .. }
-                    | iced::touch::Event::FingerLost { position, .. }
-                    | iced::touch::Event::FingerMoved { position, .. }
-                    | iced::touch::Event::FingerPressed { position, .. },
-                ) = ev
-                {
-                    Some(position)
-                } else {
-                    None
-                }
-            })
-            .next()
-            .copied())
-}
-
-#[cfg(not(feature = "touch"))]
-fn process_touch_input<M: bevy_ecs::event::Event>(_: &IcedContext<M>) -> Option<iced_core::Point> {
-    None
 }

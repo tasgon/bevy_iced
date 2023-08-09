@@ -1,14 +1,11 @@
-use bevy_input::prelude::KeyCode as BevyKeyCode;
-use bevy_input::prelude::MouseButton;
-#[cfg(feature = "touch")]
-use bevy_input::touch::{TouchInput, TouchPhase};
-#[cfg(feature = "touch")]
-use bevy_math::Vec2;
-#[cfg(feature = "touch")]
-use iced::{
+use crate::iced::{
     touch::{self, Finger},
     Point,
 };
+use bevy_input::prelude::KeyCode as BevyKeyCode;
+use bevy_input::prelude::MouseButton;
+use bevy_input::touch::{TouchInput, TouchPhase};
+use bevy_math::Vec2;
 use iced_core::keyboard::KeyCode as IcedKeyCode;
 
 pub fn key_code(virtual_keycode: BevyKeyCode) -> IcedKeyCode {
@@ -189,7 +186,6 @@ pub fn mouse_button(button: MouseButton) -> iced_core::mouse::Button {
     }
 }
 
-#[cfg(feature = "touch")]
 pub fn touch_event(bevy_touch_input: &TouchInput) -> touch::Event {
     match *bevy_touch_input {
         TouchInput {
