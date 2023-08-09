@@ -47,8 +47,8 @@ use bevy_render::{ExtractSchedule, RenderApp};
 use bevy_utils::HashMap;
 use bevy_window::{PrimaryWindow, Window};
 use iced_core::mouse::Cursor;
-use iced_graphics::backend::Text;
-use iced_graphics::Viewport;
+use iced_widget::graphics::backend::Text;
+use iced_widget::graphics::Viewport;
 use iced_runtime::user_interface::UserInterface;
 
 /// Basic re-exports for all Iced-related stuff.
@@ -65,7 +65,7 @@ mod utils;
 use systems::IcedEventQueue;
 
 /// The default renderer.
-pub type Renderer = iced_wgpu::Renderer<iced::Theme>;
+pub type Renderer = iced_renderer::Renderer<iced::Theme>;
 
 /// The main feature of `bevy_iced`.
 /// Add this to your [`App`] by calling `app.add_plugin(bevy_iced::IcedPlugin::default())`.
@@ -127,7 +127,7 @@ impl IcedProps {
         }
 
         Self {
-            renderer: iced_wgpu::Renderer::new(backend),
+            renderer: Renderer::Wgpu(iced_wgpu::Renderer::new(backend)),
             debug: iced_runtime::Debug::new(),
             clipboard: iced_core::clipboard::Null,
         }

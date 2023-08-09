@@ -13,7 +13,7 @@ use bevy_render::{
 };
 use bevy_window::Window;
 use iced_core::Size;
-use iced_graphics::Viewport;
+use iced_widget::graphics::Viewport;
 use iced_wgpu::wgpu::util::StagingBelt;
 use std::sync::Mutex;
 
@@ -89,6 +89,7 @@ impl Node for IcedNode {
         let IcedProps {
             renderer, debug, ..
         } = &mut *world.resource::<IcedResource>().lock().unwrap();
+        let crate::Renderer::Wgpu(renderer) = renderer else { return Ok(()) };
         let render_device = world.resource::<RenderDevice>().wgpu_device();
         let render_queue = world.resource::<RenderQueue>();
         let viewport = world.resource::<ViewportResource>();
