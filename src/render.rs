@@ -12,9 +12,9 @@ use bevy_render::{
     Extract,
 };
 use bevy_window::Window;
-use iced::Size;
+use iced_core::Size;
+use iced_graphics::Viewport;
 use iced_wgpu::wgpu::util::StagingBelt;
-use iced_winit::Viewport;
 use std::sync::Mutex;
 
 use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};

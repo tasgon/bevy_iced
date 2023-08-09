@@ -6,9 +6,9 @@ use bevy::{
 use bevy_iced::iced::{
     self,
     widget::{slider, text, text_input, Button, Column, Row},
-    Alignment,
+    Alignment, Style,
 };
-use bevy_iced::{IcedContext, IcedPlugin, IcedSettings, IcedStyle};
+use bevy_iced::{IcedContext, IcedPlugin, IcedSettings};
 use rand::random as rng;
 
 #[derive(Clone, Event)]
@@ -50,7 +50,7 @@ pub fn main() {
         .insert_resource(IcedSettings {
             scale_factor: None,
             theme: iced::Theme::Light,
-            style: IcedStyle {
+            style: Style {
                 text_color: iced::Color::from_rgb(0.0, 1.0, 1.0),
             },
             ..Default::default()

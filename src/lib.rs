@@ -52,15 +52,13 @@ use bevy_render::renderer::{RenderDevice, RenderQueue};
 use bevy_render::{ExtractSchedule, RenderApp};
 use bevy_utils::HashMap;
 use bevy_window::{PrimaryWindow, Window};
-use iced::mouse::Cursor;
+use iced_core::mouse::Cursor;
 use iced_graphics::backend::Text;
+use iced_graphics::Viewport;
 use iced_runtime::user_interface::UserInterface;
-use iced_winit::Viewport;
 
-pub use iced;
-pub use iced_core::renderer::Style as IcedStyle;
-pub use iced_graphics::Antialiasing as IcedAntialiasing;
-pub use iced_wgpu;
+/// Basic re-exports for all Iced-related stuff.
+pub mod iced;
 
 mod conversions;
 mod render;
@@ -68,17 +66,14 @@ mod systems;
 
 use systems::IcedEventQueue;
 
+/// The default renderer.
+pub type Renderer = iced_wgpu::Renderer<iced::Theme>;
+
 /// The main feature of `bevy_iced`.
 /// Add this to your [`App`] by calling `app.add_plugin(bevy_iced::IcedPlugin::default())`.
 pub struct IcedPlugin {
-    /// The default [`Font`] to use.
-    pub default_font: iced::Font,
-    /// The default size of text.
-    pub default_text_size: f32,
-    /// The antialiasing strategy that will be used for triangle primitives.
-    ///
-    /// By default, it is `None`.
-    pub antialiasing: Option<IcedAntialiasing>,
+    /// The settings that Iced should used.
+    pub settings: iced_wgpu::Settings,
     /// Font file contents
     pub fonts: Vec<&'static [u8]>,
 }
@@ -86,9 +81,7 @@ pub struct IcedPlugin {
 impl Default for IcedPlugin {
     fn default() -> Self {
         Self {
-            default_font: iced::Font::default(),
-            default_text_size: iced_wgpu::Settings::default().default_text_size,
-            antialiasing: None,
+            settings: Default::default(),
             fonts: vec![],
         }
     }
@@ -104,16 +97,9 @@ impl Plugin for IcedPlugin {
     }
 
     fn finish(&self, app: &mut App) {
-        let default_viewport = Viewport::with_physical_size(iced::Size::new(1600, 900), 1.0);
+        let default_viewport = Viewport::with_physical_size(iced_core::Size::new(1600, 900), 1.0);
         let default_viewport = ViewportResource(default_viewport);
-        let iced_resource: IcedResource = IcedProps::new(
-            app,
-            self.default_font,
-            self.default_text_size,
-            self.antialiasing,
-            &self.fonts,
-        )
-        .into();
+        let iced_resource: IcedResource = IcedProps::new(app, self).into();
 
         app.insert_resource(default_viewport.clone())
             .insert_resource(iced_resource.clone());
@@ -128,19 +114,13 @@ impl Plugin for IcedPlugin {
 }
 
 struct IcedProps {
-    renderer: iced_wgpu::Renderer<iced::Theme>,
+    renderer: Renderer,
     debug: iced_runtime::Debug,
     clipboard: iced_core::clipboard::Null,
 }
 
 impl IcedProps {
-    fn new(
-        app: &App,
-        default_font: iced::Font,
-        default_text_size: f32,
-        antialiasing: Option<IcedAntialiasing>,
-        fonts: &Vec<&'static [u8]>,
-    ) -> Self {
+    fn new(app: &App, config: &IcedPlugin) -> Self {
         let render_world = &app.sub_app(RenderApp).world;
         let device = render_world
             .get_resource::<RenderDevice>()
@@ -148,14 +128,8 @@ impl IcedProps {
             .wgpu_device();
         let queue = render_world.get_resource::<RenderQueue>().unwrap();
         let format = iced_wgpu::wgpu::TextureFormat::Bgra8UnormSrgb;
-        let settings = iced_wgpu::Settings {
-            default_font,
-            default_text_size,
-            antialiasing,
-            ..Default::default()
-        };
-        let mut backend = iced_wgpu::Backend::new(device, queue, settings, format);
-        for font in fonts {
+        let mut backend = iced_wgpu::Backend::new(device, queue, config.settings, format);
+        for font in &config.fonts {
             backend.load_font(Cow::Borrowed(*font));
         }
 
@@ -214,9 +188,9 @@ pub struct IcedSettings {
     /// Setting this to `None` defaults to using the `Window`s scale factor.
     pub scale_factor: Option<f64>,
     /// The theme to use for rendering Iced elements.
-    pub theme: iced::Theme,
+    pub theme: iced_widget::style::Theme,
     /// The style to use for rendering Iced elements.
-    pub style: IcedStyle,
+    pub style: iced::Style,
 }
 
 impl IcedSettings {
@@ -230,9 +204,9 @@ impl Default for IcedSettings {
     fn default() -> Self {
         Self {
             scale_factor: None,
-            theme: iced::Theme::Dark,
-            style: IcedStyle {
-                text_color: iced::Color::WHITE,
+            theme: iced_widget::style::Theme::Dark,
+            style: iced::Style {
+                text_color: iced_core::Color::WHITE,
             },
         }
     }
@@ -268,10 +242,7 @@ pub struct IcedContext<'w, 's, Message: bevy_ecs::event::Event> {
 
 impl<'w, 's, M: bevy_ecs::event::Event> IcedContext<'w, 's, M> {
     /// Display an [`Element`] to the screen.
-    pub fn display<'a>(
-        &'a mut self,
-        element: impl Into<iced::Element<'a, M, iced_wgpu::Renderer<iced::Theme>>>,
-    ) {
+    pub fn display<'a>(&'a mut self, element: impl Into<iced_core::Element<'a, M, Renderer>>) {
         let IcedProps {
             ref mut renderer,
             ref mut clipboard,
@@ -316,8 +287,12 @@ impl<'w, 's, M: bevy_ecs::event::Event> IcedContext<'w, 's, M> {
     }
 }
 
-fn process_cursor_position(position: Vec2, bounds: iced::Size, window: &Window) -> iced::Point {
-    iced::Point {
+fn process_cursor_position(
+    position: Vec2,
+    bounds: iced_core::Size,
+    window: &Window,
+) -> iced_core::Point {
+    iced_core::Point {
         x: position.x * bounds.width / window.width(),
         y: position.y * bounds.height / window.height(),
     }
@@ -356,6 +331,6 @@ fn process_touch_input<M: bevy_ecs::event::Event>(context: &IcedContext<M>) -> O
 }
 
 #[cfg(not(feature = "touch"))]
-fn process_touch_input<M: bevy_ecs::event::Event>(_: &IcedContext<M>) -> Option<iced::Point> {
+fn process_touch_input<M: bevy_ecs::event::Event>(_: &IcedContext<M>) -> Option<iced_core::Point> {
     None
 }

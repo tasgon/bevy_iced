@@ -25,12 +25,11 @@ bevy_render = "0.11"
 bevy_utils = "0.11"
 bevy_window = "0.11"
 
-iced = "0.10.0"
-iced_core = "0.10.0"
-iced_graphics = "0.9.0"
-iced_runtime = "0.1.0"
-iced_wgpu = "0.11.0"
-iced_winit = "0.10.0"
+iced_core = "0.10"
+iced_graphics = "0.9"
+iced_runtime = "0.1"
+iced_wgpu = "0.11"
+iced_widget = "0.1"
 
 [dev-dependencies]
 bevy = "0.11"

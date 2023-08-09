@@ -13,10 +13,10 @@ use bevy_input::{
     ButtonState, Input,
 };
 use bevy_window::{CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter};
-use iced::{keyboard, mouse, Event as IcedEvent, Point};
+use iced_core::{keyboard, mouse, Event as IcedEvent, Point};
 
 #[derive(Resource, Deref, DerefMut, Default)]
-pub struct IcedEventQueue(Vec<iced::Event>);
+pub struct IcedEventQueue(Vec<iced_core::Event>);
 
 #[derive(SystemParam)]
 pub struct InputEvents<'w, 's> {
@@ -64,28 +64,28 @@ pub fn process_input(
     for ev in events.mouse_button.iter() {
         let button = conversions::mouse_button(ev.button);
         event_queue.push(IcedEvent::Mouse(match ev.state {
-            ButtonState::Pressed => iced::mouse::Event::ButtonPressed(button),
-            ButtonState::Released => iced::mouse::Event::ButtonReleased(button),
+            ButtonState::Pressed => iced_core::mouse::Event::ButtonPressed(button),
+            ButtonState::Released => iced_core::mouse::Event::ButtonReleased(button),
         }))
     }
 
     for _ev in events.cursor_entered.iter() {
-        event_queue.push(IcedEvent::Mouse(iced::mouse::Event::CursorEntered));
+        event_queue.push(IcedEvent::Mouse(iced_core::mouse::Event::CursorEntered));
     }
 
     for _ev in events.cursor_left.iter() {
-        event_queue.push(IcedEvent::Mouse(iced::mouse::Event::CursorLeft));
+        event_queue.push(IcedEvent::Mouse(iced_core::mouse::Event::CursorLeft));
     }
 
     for ev in events.mouse_wheel.iter() {
-        event_queue.push(IcedEvent::Mouse(iced::mouse::Event::WheelScrolled {
+        event_queue.push(IcedEvent::Mouse(iced_core::mouse::Event::WheelScrolled {
             delta: mouse::ScrollDelta::Pixels { x: ev.x, y: ev.y },
         }));
     }
 
     for ev in events.received_character.iter() {
         event_queue.push(IcedEvent::Keyboard(
-            iced::keyboard::Event::CharacterReceived(ev.char),
+            iced_core::keyboard::Event::CharacterReceived(ev.char),
         ));
     }
 
