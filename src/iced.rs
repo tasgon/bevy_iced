@@ -1,3 +1,5 @@
+// Largely taken from https://github.com/iced-rs/iced/blob/0.10/src/lib.rs
+
 use iced_widget::renderer;
 use iced_widget::style;
 
