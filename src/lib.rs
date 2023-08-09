@@ -117,6 +117,9 @@ impl IcedProps {
             .unwrap()
             .wgpu_device();
         let queue = render_world.get_resource::<RenderQueue>().unwrap();
+        #[cfg(target_arch = "wasm32")]
+        let format = iced_wgpu::wgpu::TextureFormat::Rgba8UnormSrgb;
+        #[cfg(not(target_arch = "wasm32"))]
         let format = iced_wgpu::wgpu::TextureFormat::Bgra8UnormSrgb;
         let mut backend = iced_wgpu::Backend::new(device, queue, config.settings, format);
         for font in &config.fonts {
