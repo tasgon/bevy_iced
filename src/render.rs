@@ -14,12 +14,18 @@ use bevy_render::{
 use bevy_window::Window;
 use iced_core::Size;
 use iced_wgpu::wgpu::util::StagingBelt;
+use iced_wgpu::wgpu::TextureFormat;
 use iced_widget::graphics::Viewport;
 use std::sync::Mutex;
 
 use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};
 
 pub const ICED_PASS: &str = "bevy_iced_pass";
+
+#[cfg(target_arch = "wasm32")]
+pub const TEXTURE_FMT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
+#[cfg(not(target_arch = "wasm32"))]
+pub const TEXTURE_FMT: TextureFormat = TextureFormat::Bgra8UnormSrgb;
 
 #[derive(Resource, Deref, DerefMut, Clone)]
 pub struct ViewportResource(pub Viewport);
@@ -30,7 +36,9 @@ pub(crate) fn update_viewport(
     mut commands: Commands,
 ) {
     let window = windows.single();
-    let scale_factor = iced_settings.scale_factor.unwrap_or(window.scale_factor());
+    let scale_factor = iced_settings
+        .scale_factor
+        .unwrap_or(window.scale_factor().into());
     let viewport = Viewport::with_physical_size(
         Size::new(window.physical_width(), window.physical_height()),
         scale_factor,
@@ -110,6 +118,7 @@ impl Node for IcedNode {
                 render_queue,
                 render_context.command_encoder(),
                 None,
+                TEXTURE_FMT,
                 view,
                 primitives,
                 viewport,

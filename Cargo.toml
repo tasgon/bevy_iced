@@ -13,21 +13,38 @@ documentation = "https://docs.rs/bevy_iced"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy_app = "0.11"
-bevy_derive = "0.11"
-bevy_ecs = "0.11"
-bevy_input = "0.11"
-bevy_math = "0.11"
-bevy_render = "0.11"
-bevy_utils = "0.11"
-bevy_window = "0.11"
+# NOTE: temp using "main" branch until a release with wgpu version matching iced
+# bevy_app = "0.12"
+# bevy_derive = "0.12"
+# bevy_ecs = "0.12"
+# bevy_input = "0.12"
+# bevy_math = "0.12"
+# bevy_render = "0.12"
+# bevy_utils = "0.12"
+# bevy_window = "0.12"
+bevy_app = { git = "https://github.com/bevyengine/bevy", branch = "main" }
+bevy_derive = { git = "https://github.com/bevyengine/bevy", branch = "main" }
+bevy_ecs = { git = "https://github.com/bevyengine/bevy", branch = "main" }
+bevy_input = { git = "https://github.com/bevyengine/bevy", branch = "main" }
+bevy_math = { git = "https://github.com/bevyengine/bevy", branch = "main" }
+bevy_render = { git = "https://github.com/bevyengine/bevy", branch = "main" }
+bevy_utils = { git = "https://github.com/bevyengine/bevy", branch = "main" }
+bevy_window = { git = "https://github.com/bevyengine/bevy", branch = "main" }
 
-iced_core = "0.10"
-iced_runtime = "0.1"
-iced_wgpu = "0.11"
-iced_widget = "0.1"
-iced_renderer = { version = "0.1", features = ["wgpu"] }
+# NOTE: temp using "master" branch until a release with wgpu version matching bevy
+# NOTE: temp using "wgpu-renderer-send" because the `wgpu::Renderer` is no longer `Send` on master
+# iced_core = "0.10"
+# iced_runtime = "0.1"
+# iced_wgpu = "0.11"
+# iced_widget = "0.1"
+# iced_renderer = { version = "0.1", features = ["wgpu"] }
+iced_core = { git = "https://github.com/tzemanovic/iced/", branch = "wgpu-renderer-send" }
+iced_runtime = { git = "https://github.com/tzemanovic/iced/", branch = "wgpu-renderer-send" }
+iced_wgpu = { git = "https://github.com/tzemanovic/iced/", branch = "wgpu-renderer-send" }
+iced_widget = { git = "https://github.com/tzemanovic/iced/", branch = "wgpu-renderer-send" }
+iced_renderer = { git = "https://github.com/tzemanovic/iced/", branch = "wgpu-renderer-send", features = ["wgpu"]}
 
 [dev-dependencies]
-bevy = "0.11"
+# bevy = "0.12"
+bevy = { git = "https://github.com/bevyengine/bevy", branch = "main" }
 rand = "0.8"

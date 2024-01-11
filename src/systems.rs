@@ -9,7 +9,7 @@ use bevy_input::touch::TouchInput;
 use bevy_input::{
     keyboard::KeyboardInput,
     mouse::{MouseButtonInput, MouseWheel},
-    ButtonState, Input,
+    ButtonInput, ButtonState,
 };
 use bevy_window::{CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter};
 use iced_core::{keyboard, mouse, Event as IcedEvent, Point};
@@ -29,7 +29,7 @@ pub struct InputEvents<'w, 's> {
     touch_input: EventReader<'w, 's, TouchInput>,
 }
 
-fn compute_modifiers(input_map: &Input<KeyCode>) -> keyboard::Modifiers {
+fn compute_modifiers(input_map: &ButtonInput<KeyCode>) -> keyboard::Modifiers {
     let mut modifiers = keyboard::Modifiers::default();
     if input_map.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]) {
         modifiers |= keyboard::Modifiers::CTRL;
@@ -49,17 +49,17 @@ fn compute_modifiers(input_map: &Input<KeyCode>) -> keyboard::Modifiers {
 pub fn process_input(
     mut events: InputEvents,
     mut event_queue: ResMut<IcedEventQueue>,
-    input_map: Res<Input<KeyCode>>,
+    input_map: Res<ButtonInput<KeyCode>>,
 ) {
     event_queue.clear();
 
-    for ev in events.cursor.iter() {
+    for ev in events.cursor.read() {
         event_queue.push(IcedEvent::Mouse(mouse::Event::CursorMoved {
             position: Point::new(ev.position.x, ev.position.y),
         }));
     }
 
-    for ev in events.mouse_button.iter() {
+    for ev in events.mouse_button.read() {
         let button = conversions::mouse_button(ev.button);
         event_queue.push(IcedEvent::Mouse(match ev.state {
             ButtonState::Pressed => iced_core::mouse::Event::ButtonPressed(button),
@@ -67,60 +67,60 @@ pub fn process_input(
         }))
     }
 
-    for _ev in events.cursor_entered.iter() {
+    for _ev in events.cursor_entered.read() {
         event_queue.push(IcedEvent::Mouse(iced_core::mouse::Event::CursorEntered));
     }
 
-    for _ev in events.cursor_left.iter() {
+    for _ev in events.cursor_left.read() {
         event_queue.push(IcedEvent::Mouse(iced_core::mouse::Event::CursorLeft));
     }
 
-    for ev in events.mouse_wheel.iter() {
+    for ev in events.mouse_wheel.read() {
         event_queue.push(IcedEvent::Mouse(iced_core::mouse::Event::WheelScrolled {
             delta: mouse::ScrollDelta::Pixels { x: ev.x, y: ev.y },
         }));
     }
 
-    for ev in events.received_character.iter() {
-        event_queue.push(IcedEvent::Keyboard(
-            iced_core::keyboard::Event::CharacterReceived(ev.char),
-        ));
-    }
-
-    for ev in events.keyboard_input.iter() {
-        if let Some(code) = ev.key_code {
-            use keyboard::Event::*;
-            let modifiers = compute_modifiers(&input_map);
-            let event = match code {
-                KeyCode::ControlLeft
-                | KeyCode::ControlRight
-                | KeyCode::ShiftLeft
-                | KeyCode::ShiftRight
-                | KeyCode::AltLeft
-                | KeyCode::AltRight
-                | KeyCode::SuperLeft
-                | KeyCode::SuperRight => ModifiersChanged(modifiers),
-                code => {
-                    let key_code = conversions::key_code(code);
-                    if ev.state.is_pressed() {
-                        KeyPressed {
-                            key_code,
-                            modifiers,
-                        }
-                    } else {
-                        KeyReleased {
-                            key_code,
-                            modifiers,
-                        }
-                    }
-                }
-            };
-
-            event_queue.push(IcedEvent::Keyboard(event));
+    for ev in events.received_character.read() {
+        for char in ev.char.chars() {
+            event_queue.push(IcedEvent::Keyboard(
+                iced_core::keyboard::Event::CharacterReceived(char),
+            ));
         }
     }
 
-    for ev in events.touch_input.iter() {
+    for ev in events.keyboard_input.read() {
+        use keyboard::Event::*;
+        let modifiers = compute_modifiers(&input_map);
+        let event = match ev.key_code {
+            KeyCode::ControlLeft
+            | KeyCode::ControlRight
+            | KeyCode::ShiftLeft
+            | KeyCode::ShiftRight
+            | KeyCode::AltLeft
+            | KeyCode::AltRight
+            | KeyCode::SuperLeft
+            | KeyCode::SuperRight => ModifiersChanged(modifiers),
+            code => {
+                let key_code = conversions::key_code(code);
+                if ev.state.is_pressed() {
+                    KeyPressed {
+                        key_code,
+                        modifiers,
+                    }
+                } else {
+                    KeyReleased {
+                        key_code,
+                        modifiers,
+                    }
+                }
+            }
+        };
+
+        event_queue.push(IcedEvent::Keyboard(event));
+    }
+
+    for ev in events.touch_input.read() {
         event_queue.push(IcedEvent::Touch(conversions::touch_event(ev)));
     }
 }

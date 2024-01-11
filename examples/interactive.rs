@@ -81,7 +81,7 @@ fn box_system(
     mut sprites: Query<&mut Sprite>,
 ) {
     let pos = (Vec3::new(rng(), rng(), 0.0) - Vec3::new(0.5, 0.5, 0.0)) * 300.0;
-    for msg in messages.iter() {
+    for msg in messages.read() {
         match msg {
             UiMessage::BoxRequested => {
                 commands.spawn(SpriteBundle {
@@ -114,7 +114,7 @@ fn update_scale_factor(
     if wheel.is_empty() {
         return;
     }
-    for event in wheel.iter() {
+    for event in wheel.read() {
         let scale_factor =
             (iced_settings.scale_factor.unwrap_or(1.0) + (event.y / 10.0) as f64).max(1.0);
         iced_settings.set_scale_factor(scale_factor);
@@ -122,7 +122,7 @@ fn update_scale_factor(
 }
 
 fn toggle_ui(mut buttons: EventReader<MouseButtonInput>, mut ui_active: ResMut<UiActive>) {
-    for ev in buttons.iter() {
+    for ev in buttons.read() {
         if ev.button == MouseButton::Right {
             **ui_active = !**ui_active;
         }

@@ -22,7 +22,7 @@ pub fn main() {
 }
 
 fn toggle_system(mut keyboard: EventReader<KeyboardInput>, mut active: ResMut<UiActive>) {
-    for event in keyboard.iter() {
+    for event in keyboard.read() {
         if event.key_code == Some(KeyCode::Space) && event.state == ButtonState::Pressed {
             active.0 = !active.0;
         }

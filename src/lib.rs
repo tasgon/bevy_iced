@@ -117,17 +117,18 @@ impl IcedProps {
             .unwrap()
             .wgpu_device();
         let queue = render_world.get_resource::<RenderQueue>().unwrap();
-        #[cfg(target_arch = "wasm32")]
-        let format = iced_wgpu::wgpu::TextureFormat::Rgba8UnormSrgb;
-        #[cfg(not(target_arch = "wasm32"))]
-        let format = iced_wgpu::wgpu::TextureFormat::Bgra8UnormSrgb;
-        let mut backend = iced_wgpu::Backend::new(device, queue, config.settings, format);
+        let mut backend =
+            iced_wgpu::Backend::new(device, queue.as_ref(), config.settings, render::TEXTURE_FMT);
         for font in &config.fonts {
             backend.load_font(Cow::Borrowed(*font));
         }
 
         Self {
-            renderer: Renderer::Wgpu(iced_wgpu::Renderer::new(backend)),
+            renderer: Renderer::Wgpu(iced_wgpu::Renderer::new(
+                backend,
+                iced_core::Font::default(),
+                iced_core::Pixels::from(12_f32),
+            )),
             debug: iced_runtime::Debug::new(),
             clipboard: iced_core::clipboard::Null,
         }
@@ -267,7 +268,9 @@ impl<'w, 's, M: bevy_ecs::event::Event> IcedContext<'w, 's, M> {
             &mut messages,
         );
 
-        messages.into_iter().for_each(|msg| self.messages.send(msg));
+        messages.into_iter().for_each(|msg| {
+            self.messages.send(msg);
+        });
 
         ui.draw(renderer, &self.settings.theme, &self.settings.style, cursor);
 
