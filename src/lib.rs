@@ -50,6 +50,7 @@ use iced_core::mouse::Cursor;
 use iced_runtime::user_interface::UserInterface;
 use iced_widget::graphics::backend::Text;
 use iced_widget::graphics::Viewport;
+use iced_widget::style::Theme;
 
 /// Basic re-exports for all Iced-related stuff.
 ///
@@ -65,7 +66,7 @@ mod utils;
 use systems::IcedEventQueue;
 
 /// The default renderer.
-pub type Renderer = iced_renderer::Renderer<iced::Theme>;
+pub type Renderer = iced_renderer::Renderer;
 
 /// The main feature of `bevy_iced`.
 /// Add this to your [`App`] by calling `app.add_plugin(bevy_iced::IcedPlugin::default())`.
@@ -151,12 +152,9 @@ impl From<IcedProps> for IcedResource {
 }
 
 fn setup_pipeline(graph: &mut RenderGraph) {
-    graph.add_node(render::ICED_PASS, IcedNode::new());
+    graph.add_node(render::IcedPass, IcedNode::new());
 
-    graph.add_node_edge(
-        bevy_render::main_graph::node::CAMERA_DRIVER,
-        render::ICED_PASS,
-    );
+    graph.add_node_edge(bevy_render::graph::CameraDriverLabel, render::IcedPass);
 }
 
 #[derive(Default)]
@@ -234,7 +232,10 @@ pub struct IcedContext<'w, 's, Message: bevy_ecs::event::Event> {
 
 impl<'w, 's, M: bevy_ecs::event::Event> IcedContext<'w, 's, M> {
     /// Display an [`Element`] to the screen.
-    pub fn display<'a>(&'a mut self, element: impl Into<iced_core::Element<'a, M, Renderer>>) {
+    pub fn display<'a>(
+        &'a mut self,
+        element: impl Into<iced_core::Element<'a, M, Theme, Renderer>>,
+    ) {
         let IcedProps {
             ref mut renderer,
             ref mut clipboard,

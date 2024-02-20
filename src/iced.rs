@@ -6,11 +6,12 @@ use iced_widget::style;
 pub use style::theme;
 
 pub use iced_core::alignment;
+pub use iced_core::border;
 pub use iced_core::event;
 pub use iced_core::gradient;
 pub use iced_core::{
-    color, Alignment, Background, BorderRadius, Color, ContentFit, Degrees, Gradient, Length,
-    Padding, Pixels, Point, Radians, Rectangle, Size, Vector,
+    color, Alignment, Background, Border, Color, ContentFit, Degrees, Gradient, Length, Padding,
+    Pixels, Point, Radians, Rectangle, Size, Vector,
 };
 pub use iced_runtime::Command;
 
@@ -27,7 +28,7 @@ pub mod font {
 
 pub mod keyboard {
     //! Listen and react to keyboard events.
-    pub use iced_core::keyboard::{Event, KeyCode, Modifiers};
+    pub use iced_core::keyboard::{Event, Key, Location, Modifiers};
 }
 
 pub mod mouse {
@@ -43,8 +44,8 @@ pub mod overlay {
     /// This is an alias of an `iced_native` element with a default `Renderer`.
     ///
     /// [`Overlay`]: iced_native::Overlay
-    pub type Element<'a, Message, Renderer = crate::Renderer> =
-        iced_core::overlay::Element<'a, Message, Renderer>;
+    pub type Element<'a, Message, Theme = super::theme::Theme, Renderer = crate::Renderer> =
+        iced_core::overlay::Element<'a, Message, Theme, Renderer>;
 
     pub use iced_widget::overlay::*;
 }
@@ -73,13 +74,13 @@ pub use font::Font;
 pub use theme::Theme;
 
 /// The default renderer.
-pub type Renderer<Theme = style::Theme> = renderer::Renderer<Theme>;
+pub type Renderer = renderer::Renderer;
 
 /// A generic widget.
 ///
 /// This is an alias of an `iced_native` element with a default `Renderer`.
-pub type Element<'a, Message, Renderer = crate::Renderer> =
-    iced_core::Element<'a, Message, Renderer>;
+pub type Element<'a, Message, Theme = theme::Theme, Renderer = crate::Renderer> =
+    iced_core::Element<'a, Message, Theme, Renderer>;
 
 pub use iced_core::renderer::Style;
 pub use iced_wgpu::Settings;

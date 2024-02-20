@@ -12,6 +12,7 @@ use bevy_input::{
     ButtonInput, ButtonState,
 };
 use bevy_window::{CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter};
+use iced_core::SmolStr;
 use iced_core::{keyboard, mouse, Event as IcedEvent, Point};
 
 #[derive(Resource, Deref, DerefMut, Default)]
@@ -81,17 +82,23 @@ pub fn process_input(
         }));
     }
 
+    let modifiers = compute_modifiers(&input_map);
+
     for ev in events.received_character.read() {
         for char in ev.char.chars() {
-            event_queue.push(IcedEvent::Keyboard(
-                iced_core::keyboard::Event::CharacterReceived(char),
-            ));
+            let event = keyboard::Event::KeyPressed {
+                key: keyboard::Key::Character(SmolStr::new(char.to_string())),
+                modifiers,
+                // NOTE: This is a winit thing we don't get from bevy events
+                location: keyboard::Location::Standard,
+                text: None,
+            };
+            event_queue.push(IcedEvent::Keyboard(event));
         }
     }
 
     for ev in events.keyboard_input.read() {
         use keyboard::Event::*;
-        let modifiers = compute_modifiers(&input_map);
         let event = match ev.key_code {
             KeyCode::ControlLeft
             | KeyCode::ControlRight
@@ -101,17 +108,22 @@ pub fn process_input(
             | KeyCode::AltRight
             | KeyCode::SuperLeft
             | KeyCode::SuperRight => ModifiersChanged(modifiers),
-            code => {
-                let key_code = conversions::key_code(code);
+            _ => {
+                let key = conversions::key_code(&ev.logical_key);
                 if ev.state.is_pressed() {
                     KeyPressed {
-                        key_code,
+                        key,
                         modifiers,
+                        // NOTE: This is a winit thing we don't get from bevy events
+                        location: keyboard::Location::Standard,
+                        text: None,
                     }
                 } else {
                     KeyReleased {
-                        key_code,
+                        key,
                         modifiers,
+                        // NOTE: This is a winit thing we don't get from bevy events
+                        location: keyboard::Location::Standard,
                     }
                 }
             }

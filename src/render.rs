@@ -4,6 +4,7 @@ use bevy_ecs::{
     system::{Commands, Res, Resource},
     world::World,
 };
+use bevy_render::render_graph::RenderLabel;
 use bevy_render::renderer::{RenderDevice, RenderQueue};
 use bevy_render::{
     render_graph::{Node, NodeRunError, RenderGraphContext},
@@ -20,7 +21,8 @@ use std::sync::Mutex;
 
 use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};
 
-pub const ICED_PASS: &str = "bevy_iced_pass";
+#[derive(Clone, Hash, Debug, Eq, PartialEq, RenderLabel)]
+pub struct IcedPass;
 
 #[cfg(target_arch = "wasm32")]
 pub const TEXTURE_FMT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
@@ -97,7 +99,9 @@ impl Node for IcedNode {
         let IcedProps {
             renderer, debug, ..
         } = &mut *world.resource::<IcedResource>().lock().unwrap();
-        let crate::Renderer::Wgpu(renderer) = renderer else { return Ok(()) };
+        let crate::Renderer::Wgpu(renderer) = renderer else {
+            return Ok(());
+        };
         let render_device = world.resource::<RenderDevice>().wgpu_device();
         let render_queue = world.resource::<RenderQueue>();
         let viewport = world.resource::<ViewportResource>();
