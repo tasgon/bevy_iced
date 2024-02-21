@@ -13,7 +13,6 @@ documentation = "https://docs.rs/bevy_iced"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# NOTE: temp using "main" branch until a release with wgpu version matching iced
 bevy_app = "0.13"
 bevy_derive = "0.13"
 bevy_ecs = "0.13"
@@ -23,7 +22,6 @@ bevy_render = "0.13"
 bevy_utils = "0.13"
 bevy_window = "0.13"
 
-# NOTE: temp using "master" branch until a release with wgpu version matching bevy
 iced_core = "0.12"
 iced_runtime = "0.12"
 iced_wgpu = "0.12"
