@@ -86,12 +86,13 @@ pub fn process_input(
 
     for ev in events.received_character.read() {
         for char in ev.char.chars() {
+            let smol_str = SmolStr::new(char.to_string());
             let event = keyboard::Event::KeyPressed {
-                key: keyboard::Key::Character(SmolStr::new(char.to_string())),
+                key: keyboard::Key::Character(smol_str.clone()),
                 modifiers,
                 // NOTE: This is a winit thing we don't get from bevy events
                 location: keyboard::Location::Standard,
-                text: None,
+                text: Some(smol_str),
             };
             event_queue.push(IcedEvent::Keyboard(event));
         }
