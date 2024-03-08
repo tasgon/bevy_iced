@@ -127,8 +127,8 @@ impl IcedProps {
         Self {
             renderer: Renderer::Wgpu(iced_wgpu::Renderer::new(
                 backend,
-                iced_core::Font::default(),
-                iced_core::Pixels::from(12_f32),
+                config.settings.default_font,
+                config.settings.default_text_size,
             )),
             debug: iced_runtime::Debug::new(),
             clipboard: iced_core::clipboard::Null,
