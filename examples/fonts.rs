@@ -18,7 +18,7 @@ pub fn main() {
         .add_plugins(IcedPlugin {
             fonts: vec![ALPHAPROTA_FONT_BYTES],
             settings: iced::Settings {
-                default_text_size: 40.0,
+                default_text_size: 40.0.into(),
                 default_font: ALPHAPROTA_FONT,
                 ..Default::default()
             },
