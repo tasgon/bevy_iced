@@ -331,9 +331,8 @@ pub fn mouse_button(button: MouseButton) -> iced_core::mouse::Button {
         MouseButton::Right => Button::Right,
         MouseButton::Middle => Button::Middle,
         MouseButton::Other(val) => Button::Other(val),
-        // TODO: We need https://github.com/iced-rs/iced/pull/2169
-        MouseButton::Back => todo!(),
-        MouseButton::Forward => todo!(),
+        MouseButton::Back => Button::Back,
+        MouseButton::Forward => Button::Forward,
     }
 }
 
