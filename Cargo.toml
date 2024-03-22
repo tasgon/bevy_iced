@@ -22,11 +22,17 @@ bevy_render = "0.13"
 bevy_utils = "0.13"
 bevy_window = "0.13"
 
-iced_core = "0.12"
-iced_runtime = "0.12"
-iced_wgpu = "0.12"
-iced_widget = "0.12"
-iced_renderer = { version = "0.12", features = ["wgpu"] }
+# iced_core = "0.12"
+# iced_runtime = "0.12"
+# iced_wgpu = "0.12"
+# iced_widget = "0.12"
+# iced_renderer = { version = "0.12", features = ["wgpu"] }
+# NOTE: temp fork for https://github.com/iced-rs/iced/issues/2318
+iced_core = { git = "https://github.com/tzemanovic/iced.git", rev = "ac826cf5f72a0598bbe986fd6da9f970ef91ab98" }
+iced_runtime = { git = "https://github.com/tzemanovic/iced.git", rev = "ac826cf5f72a0598bbe986fd6da9f970ef91ab98" }
+iced_wgpu = { git = "https://github.com/tzemanovic/iced.git", rev = "ac826cf5f72a0598bbe986fd6da9f970ef91ab98" }
+iced_widget = { git = "https://github.com/tzemanovic/iced.git", rev = "ac826cf5f72a0598bbe986fd6da9f970ef91ab98" }
+iced_renderer = { git = "https://github.com/tzemanovic/iced.git", rev = "ac826cf5f72a0598bbe986fd6da9f970ef91ab98" , features = ["wgpu"] }
 
 [dev-dependencies]
 bevy = "0.13"

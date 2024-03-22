@@ -2268,9 +2268,8 @@ checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 
 [[package]]
 name = "iced_core"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55f9226618af7e8155fc8a233e4d84dc1ec44438705f972e35d5d50e62f937df"
+version = "0.12.1"
+source = "git+https://github.com/tzemanovic/iced.git?rev=ac826cf5f72a0598bbe986fd6da9f970ef91ab98#ac826cf5f72a0598bbe986fd6da9f970ef91ab98"
 dependencies = [
  "bitflags 2.4.1",
  "glam",
@@ -2286,9 +2285,8 @@ dependencies = [
 
 [[package]]
 name = "iced_futures"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "370bad88fb3832cbeeb3fa6c486b4701fb7e8da32a753b3101d4ce81fc1d9497"
+version = "0.12.1"
+source = "git+https://github.com/tzemanovic/iced.git?rev=ac826cf5f72a0598bbe986fd6da9f970ef91ab98#ac826cf5f72a0598bbe986fd6da9f970ef91ab98"
 dependencies = [
  "futures",
  "iced_core",
@@ -2299,9 +2297,8 @@ dependencies = [
 
 [[package]]
 name = "iced_graphics"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0660df444c64a13f72999c55a324f6d3ea020167bb1af8ef43fe2bff168d8c27"
+version = "0.12.1"
+source = "git+https://github.com/tzemanovic/iced.git?rev=ac826cf5f72a0598bbe986fd6da9f970ef91ab98#ac826cf5f72a0598bbe986fd6da9f970ef91ab98"
 dependencies = [
  "bitflags 2.4.1",
  "bytemuck",
@@ -2320,9 +2317,8 @@ dependencies = [
 
 [[package]]
 name = "iced_renderer"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59d931249515deb5fe116c7d199792cd9fd32d31bf18ffc08c6c2ad2dee5fd3e"
+version = "0.12.1"
+source = "git+https://github.com/tzemanovic/iced.git?rev=ac826cf5f72a0598bbe986fd6da9f970ef91ab98#ac826cf5f72a0598bbe986fd6da9f970ef91ab98"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -2333,9 +2329,8 @@ dependencies = [
 
 [[package]]
 name = "iced_runtime"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "618a845cd752ca195f0805b7a4f0be42c071a4fdef0b88df047006572d219a5a"
+version = "0.12.1"
+source = "git+https://github.com/tzemanovic/iced.git?rev=ac826cf5f72a0598bbe986fd6da9f970ef91ab98#ac826cf5f72a0598bbe986fd6da9f970ef91ab98"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -2345,9 +2340,8 @@ dependencies = [
 
 [[package]]
 name = "iced_style"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb6b3992bceeac1393ce0e83d06ab786be4c17c6a0004eefbdd4f6d89d5e8058"
+version = "0.12.1"
+source = "git+https://github.com/tzemanovic/iced.git?rev=ac826cf5f72a0598bbe986fd6da9f970ef91ab98#ac826cf5f72a0598bbe986fd6da9f970ef91ab98"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -2356,9 +2350,8 @@ dependencies = [
 
 [[package]]
 name = "iced_tiny_skia"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e079a4ae34df06894500e486b20bae8d8f2806fd64efe4fa9abe329e7f585f21"
+version = "0.12.1"
+source = "git+https://github.com/tzemanovic/iced.git?rev=ac826cf5f72a0598bbe986fd6da9f970ef91ab98#ac826cf5f72a0598bbe986fd6da9f970ef91ab98"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -2373,9 +2366,8 @@ dependencies = [
 
 [[package]]
 name = "iced_wgpu"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa5d3ce370c7044ddc9535c8f87057f1008434a495be6b9f46b2666c3e9638f7"
+version = "0.12.1"
+source = "git+https://github.com/tzemanovic/iced.git?rev=ac826cf5f72a0598bbe986fd6da9f970ef91ab98#ac826cf5f72a0598bbe986fd6da9f970ef91ab98"
 dependencies = [
  "bitflags 2.4.1",
  "bytemuck",
@@ -2391,9 +2383,8 @@ dependencies = [
 
 [[package]]
 name = "iced_widget"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99f30ebbcc0706c19a92f01669193271d82bb209fda83576392d04cef3214ca2"
+version = "0.12.1"
+source = "git+https://github.com/tzemanovic/iced.git?rev=ac826cf5f72a0598bbe986fd6da9f970ef91ab98#ac826cf5f72a0598bbe986fd6da9f970ef91ab98"
 dependencies = [
  "iced_renderer",
  "iced_runtime",
