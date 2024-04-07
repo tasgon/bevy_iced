@@ -4,6 +4,7 @@ use bevy_ecs::{
     system::{Commands, Res, Resource},
     world::World,
 };
+use bevy_render::render_graph::RenderLabel;
 use bevy_render::renderer::{RenderDevice, RenderQueue};
 use bevy_render::{
     render_graph::{Node, NodeRunError, RenderGraphContext},
@@ -14,12 +15,19 @@ use bevy_render::{
 use bevy_window::Window;
 use iced_core::Size;
 use iced_wgpu::wgpu::util::StagingBelt;
+use iced_wgpu::wgpu::TextureFormat;
 use iced_widget::graphics::Viewport;
 use std::sync::Mutex;
 
 use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};
 
-pub const ICED_PASS: &str = "bevy_iced_pass";
+#[derive(Clone, Hash, Debug, Eq, PartialEq, RenderLabel)]
+pub struct IcedPass;
+
+#[cfg(target_arch = "wasm32")]
+pub const TEXTURE_FMT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
+#[cfg(not(target_arch = "wasm32"))]
+pub const TEXTURE_FMT: TextureFormat = TextureFormat::Bgra8UnormSrgb;
 
 #[derive(Resource, Deref, DerefMut, Clone)]
 pub struct ViewportResource(pub Viewport);
@@ -30,7 +38,9 @@ pub(crate) fn update_viewport(
     mut commands: Commands,
 ) {
     let window = windows.single();
-    let scale_factor = iced_settings.scale_factor.unwrap_or(window.scale_factor());
+    let scale_factor = iced_settings
+        .scale_factor
+        .unwrap_or(window.scale_factor().into());
     let viewport = Viewport::with_physical_size(
         Size::new(window.physical_width(), window.physical_height()),
         scale_factor,
@@ -89,7 +99,9 @@ impl Node for IcedNode {
         let IcedProps {
             renderer, debug, ..
         } = &mut *world.resource::<IcedResource>().lock().unwrap();
-        let crate::Renderer::Wgpu(renderer) = renderer else { return Ok(()) };
+        let crate::Renderer::Wgpu(renderer) = renderer else {
+            return Ok(());
+        };
         let render_device = world.resource::<RenderDevice>().wgpu_device();
         let render_queue = world.resource::<RenderQueue>();
         let viewport = world.resource::<ViewportResource>();
@@ -110,6 +122,7 @@ impl Node for IcedNode {
                 render_queue,
                 render_context.command_encoder(),
                 None,
+                TEXTURE_FMT,
                 view,
                 primitives,
                 viewport,
