@@ -11,7 +11,7 @@ pub use iced_core::event;
 pub use iced_core::gradient;
 pub use iced_core::{
     color, Alignment, Background, Border, Color, ContentFit, Degrees, Gradient, Length, Padding,
-    Pixels, Point, Radians, Rectangle, Size, Vector,
+    Pixels, Point, Radians, Rectangle, Shadow, Size, Vector,
 };
 pub use iced_runtime::Command;
 
