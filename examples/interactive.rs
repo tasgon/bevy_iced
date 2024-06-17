@@ -38,7 +38,7 @@ pub fn main() {
         }))
         .add_plugins((
             IcedPlugin::default(),
-            FrameTimeDiagnosticsPlugin::default(),
+            FrameTimeDiagnosticsPlugin,
             LogDiagnosticsPlugin::default(),
         ))
         .add_event::<UiMessage>()
@@ -53,7 +53,6 @@ pub fn main() {
             style: Style {
                 text_color: iced::Color::from_rgb(0.0, 1.0, 1.0),
             },
-            ..Default::default()
         })
         .add_systems(Startup, build_program)
         .add_systems(
@@ -98,7 +97,7 @@ fn box_system(
                 data.scale = *new_scale;
             }
             UiMessage::Text(s) => {
-                data.text = s.clone();
+                data.text.clone_from(s);
                 for mut i in &mut sprites.iter_mut() {
                     i.color = Color::rgba_u8(rng(), rng(), rng(), rng());
                 }

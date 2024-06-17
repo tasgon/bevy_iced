@@ -3,7 +3,7 @@ use crate::IcedContext;
 use bevy_math::Vec2;
 use bevy_window::Window;
 
-pub(crate) fn process_cursor_position(
+pub fn process_cursor_position(
     position: Vec2,
     bounds: iced_core::Size,
     window: &Window,
@@ -15,7 +15,7 @@ pub(crate) fn process_cursor_position(
 }
 
 /// To correctly process input as last resort events are used
-pub(crate) fn process_touch_input<M: bevy_ecs::event::Event>(
+pub fn process_touch_input<M: bevy_ecs::event::Event>(
     context: &IcedContext<M>,
 ) -> Option<iced::Point> {
     context

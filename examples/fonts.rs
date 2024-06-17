@@ -7,7 +7,7 @@ use bevy_iced::iced::{
 use bevy_iced::{iced, IcedContext, IcedPlugin};
 
 const ALPHAPROTA_FONT: Font = Font::with_name("Alpha Prota");
-const ALPHAPROTA_FONT_BYTES: &'static [u8] = include_bytes!("../assets/fonts/AlphaProta.ttf");
+const ALPHAPROTA_FONT_BYTES: &[u8] = include_bytes!("../assets/fonts/AlphaProta.ttf");
 
 #[derive(Event)]
 pub enum UiMessage {}
@@ -30,7 +30,7 @@ pub fn main() {
 
 fn ui_system(mut ctx: IcedContext<UiMessage>) {
     ctx.display(column!(
-        text(format!("I am the default font")).font(font::Font::DEFAULT),
-        text(format!("I am another font"))
+        text("I am the default font".to_string()).font(font::Font::DEFAULT),
+        text("I am another font".to_string())
     ));
 }

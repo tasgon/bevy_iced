@@ -324,7 +324,7 @@ pub fn key_code(virtual_keycode: &BevyKey) -> IcedKey {
     }
 }
 
-pub fn mouse_button(button: MouseButton) -> iced_core::mouse::Button {
+pub const fn mouse_button(button: MouseButton) -> iced_core::mouse::Button {
     use iced_core::mouse::Button;
     match button {
         MouseButton::Left => Button::Left,
@@ -336,7 +336,7 @@ pub fn mouse_button(button: MouseButton) -> iced_core::mouse::Button {
     }
 }
 
-pub fn touch_event(bevy_touch_input: &TouchInput) -> touch::Event {
+pub const fn touch_event(bevy_touch_input: &TouchInput) -> touch::Event {
     match *bevy_touch_input {
         TouchInput {
             phase: TouchPhase::Started,
