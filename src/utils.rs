@@ -21,28 +21,32 @@ pub fn process_touch_input<M: bevy_ecs::event::Event>(
     context
         .touches
         .first_pressed_position()
-        .or(context
-            .touches
-            .iter_just_released()
-            .map(|touch| touch.position())
-            .next())
+        .or_else(|| {
+            context
+                .touches
+                .iter_just_released()
+                .map(|touch| touch.position())
+                .next()
+        })
         .map(|Vec2 { x, y }| iced::Point { x, y })
-        .or(context
-            .events
-            .iter()
-            .filter_map(|ev| {
-                if let iced::Event::Touch(
-                    iced::touch::Event::FingerLifted { position, .. }
-                    | iced::touch::Event::FingerLost { position, .. }
-                    | iced::touch::Event::FingerMoved { position, .. }
-                    | iced::touch::Event::FingerPressed { position, .. },
-                ) = ev
-                {
-                    Some(position)
-                } else {
-                    None
-                }
-            })
-            .next()
-            .copied())
+        .or_else(|| {
+            context
+                .events
+                .iter()
+                .filter_map(|ev| {
+                    if let iced::Event::Touch(
+                        iced::touch::Event::FingerLifted { position, .. }
+                        | iced::touch::Event::FingerLost { position, .. }
+                        | iced::touch::Event::FingerMoved { position, .. }
+                        | iced::touch::Event::FingerPressed { position, .. },
+                    ) = ev
+                    {
+                        Some(position)
+                    } else {
+                        None
+                    }
+                })
+                .next()
+                .copied()
+        })
 }

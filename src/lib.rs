@@ -247,14 +247,16 @@ impl<'w, 's, M: bevy_ecs::event::Event> IcedContext<'w, 's, M> {
 
         let cursor = {
             let window = self.windows.single();
-            match window.cursor_position() {
-                Some(position) => {
+            window.cursor_position().map_or_else(
+                || {
+                    utils::process_touch_input(self)
+                        .map(Cursor::Available)
+                        .unwrap_or(Cursor::Unavailable)
+                },
+                |position| {
                     Cursor::Available(utils::process_cursor_position(position, bounds, window))
-                }
-                None => utils::process_touch_input(self)
-                    .map(Cursor::Available)
-                    .unwrap_or(Cursor::Unavailable),
-            }
+                },
+            )
         };
 
         let mut messages = Vec::<M>::new();
