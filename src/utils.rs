@@ -25,7 +25,7 @@ pub fn process_touch_input<M: bevy_ecs::event::Event>(
             context
                 .touches
                 .iter_just_released()
-                .map(|touch| touch.position())
+                .map(bevy_input::touch::Touch::position)
                 .next()
         })
         .map(|Vec2 { x, y }| iced::Point { x, y })
@@ -33,7 +33,7 @@ pub fn process_touch_input<M: bevy_ecs::event::Event>(
             context
                 .events
                 .iter()
-                .filter_map(|ev| {
+                .find_map(|ev| {
                     if let iced::Event::Touch(
                         iced::touch::Event::FingerLifted { position, .. }
                         | iced::touch::Event::FingerLost { position, .. }
@@ -46,7 +46,6 @@ pub fn process_touch_input<M: bevy_ecs::event::Event>(
                         None
                     }
                 })
-                .next()
                 .copied()
         })
 }

@@ -77,7 +77,7 @@ impl IcedNode {
 
 impl Node for IcedNode {
     fn update(&mut self, _world: &mut World) {
-        self.staging_belt.lock().unwrap().recall()
+        self.staging_belt.lock().unwrap().recall();
     }
 
     fn run(
@@ -106,11 +106,7 @@ impl Node for IcedNode {
         let render_queue = world.resource::<RenderQueue>();
         let viewport = world.resource::<ViewportResource>();
 
-        if !world
-            .get_resource::<DidDrawBasic>()
-            .map(|x| x.0)
-            .unwrap_or(false)
-        {
+        if !world.get_resource::<DidDrawBasic>().is_some_and(|x| x.0) {
             return Ok(());
         }
         let view = extracted_window.swap_chain_texture_view.as_ref().unwrap();

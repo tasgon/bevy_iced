@@ -65,7 +65,7 @@ pub fn process_input(
         event_queue.push(IcedEvent::Mouse(match ev.state {
             ButtonState::Pressed => iced_core::mouse::Event::ButtonPressed(button),
             ButtonState::Released => iced_core::mouse::Event::ButtonReleased(button),
-        }))
+        }));
     }
 
     for _ev in events.cursor_entered.read() {

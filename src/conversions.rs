@@ -12,8 +12,6 @@ pub fn key_code(virtual_keycode: &BevyKey) -> IcedKey {
     use iced_core::keyboard::key::Named;
     match virtual_keycode {
         BevyKey::Character(s) => IcedKey::Character(s.clone()),
-        BevyKey::Unidentified(_) => IcedKey::Unidentified,
-        BevyKey::Dead(_) => IcedKey::Unidentified,
         BevyKey::Alt => IcedKey::Named(Named::Alt),
         BevyKey::AltGraph => IcedKey::Named(Named::AltGraph),
         BevyKey::CapsLock => IcedKey::Named(Named::CapsLock),
@@ -320,6 +318,7 @@ pub fn key_code(virtual_keycode: &BevyKey) -> IcedKey {
         BevyKey::F33 => IcedKey::Named(Named::F33),
         BevyKey::F34 => IcedKey::Named(Named::F34),
         BevyKey::F35 => IcedKey::Named(Named::F35),
+        BevyKey::Unidentified(_) | BevyKey::Dead(_) => IcedKey::Unidentified,
         _ => IcedKey::Unidentified,
     }
 }
