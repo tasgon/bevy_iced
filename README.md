@@ -51,3 +51,4 @@ See the [examples](https://github.com/tasgon/bevy_iced/tree/master/examples) and
 
 - [`bevy_egui`](https://github.com/mvlabat/bevy_egui) for giving me a useful starting point to do this
 - [Joonas Satka](https://github.com/jsatka) for helping me port to Bevy 0.11
+- [Tomas Zemanovic](https://github.com/tzemanovic) and [Julia Naomi](https://github.com/naomijub) for helping me port to Bevy 0.13
