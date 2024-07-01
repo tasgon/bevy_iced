@@ -32,7 +32,7 @@ pub const TEXTURE_FMT: TextureFormat = TextureFormat::Bgra8UnormSrgb;
 #[derive(Resource, Deref, DerefMut, Clone)]
 pub struct ViewportResource(pub Viewport);
 
-pub(crate) fn update_viewport(
+pub fn update_viewport(
     windows: Query<&Window>,
     iced_settings: Res<IcedSettings>,
     mut commands: Commands,
@@ -40,7 +40,7 @@ pub(crate) fn update_viewport(
     let window = windows.single();
     let scale_factor = iced_settings
         .scale_factor
-        .unwrap_or(window.scale_factor().into());
+        .unwrap_or_else(|| window.scale_factor().into());
     let viewport = Viewport::with_physical_size(
         Size::new(window.physical_width(), window.physical_height()),
         scale_factor,
@@ -52,7 +52,7 @@ pub(crate) fn update_viewport(
 #[derive(Resource, Deref, DerefMut)]
 struct DidDrawBasic(bool);
 
-pub(crate) fn extract_iced_data(
+pub fn extract_iced_data(
     mut commands: Commands,
     viewport: Extract<Res<ViewportResource>>,
     did_draw: Extract<Res<DidDraw>>,
@@ -77,7 +77,7 @@ impl IcedNode {
 
 impl Node for IcedNode {
     fn update(&mut self, _world: &mut World) {
-        self.staging_belt.lock().unwrap().recall()
+        self.staging_belt.lock().unwrap().recall();
     }
 
     fn run(
@@ -106,11 +106,7 @@ impl Node for IcedNode {
         let render_queue = world.resource::<RenderQueue>();
         let viewport = world.resource::<ViewportResource>();
 
-        if !world
-            .get_resource::<DidDrawBasic>()
-            .map(|x| x.0)
-            .unwrap_or(false)
-        {
+        if !world.get_resource::<DidDrawBasic>().is_some_and(|x| x.0) {
             return Ok(());
         }
         let view = extracted_window.swap_chain_texture_view.as_ref().unwrap();
