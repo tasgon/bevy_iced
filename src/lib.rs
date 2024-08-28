@@ -100,7 +100,7 @@ impl Plugin for IcedPlugin {
             .insert_resource(default_viewport)
             .insert_resource(iced_resource)
             .add_systems(ExtractSchedule, extract_iced_data);
-        setup_pipeline(&mut render_app.world.get_resource_mut().unwrap());
+        setup_pipeline(&mut render_app.world_mut().get_resource_mut().unwrap());
     }
 }
 
@@ -112,7 +112,7 @@ struct IcedProps {
 
 impl IcedProps {
     fn new(app: &App, config: &IcedPlugin) -> Self {
-        let render_world = &app.sub_app(RenderApp).world;
+        let render_world = &app.sub_app(RenderApp).world();
         let device = render_world
             .get_resource::<RenderDevice>()
             .unwrap()
