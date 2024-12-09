@@ -17,6 +17,6 @@ pub fn main() {
 fn ui_system(time: Res<Time>, mut ctx: IcedContext<UiMessage>) {
     ctx.display(text(format!(
         "Hello Iced! Running for {:.2} seconds.",
-        time.elapsed_seconds()
+        time.elapsed_secs()
     )));
 }

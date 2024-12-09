@@ -63,13 +63,13 @@ pub fn main() {
 }
 
 fn build_program(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d::default());
 }
 
 fn tick(mut sprites: Query<&mut Sprite>, time: Res<Time>, data: Res<UiData>) {
     let scale = data.scale;
     for mut s in sprites.iter_mut() {
-        s.custom_size = Some(Vec2::new(scale, scale) * time.elapsed_seconds().sin().abs());
+        s.custom_size = Some(Vec2::new(scale, scale) * time.elapsed_secs().sin().abs());
     }
 }
 
@@ -83,15 +83,14 @@ fn box_system(
     for msg in messages.read() {
         match msg {
             UiMessage::BoxRequested => {
-                commands.spawn(SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::rgba_u8(rng(), rng(), rng(), rng()),
+                commands.spawn((
+                    Sprite {
+                        color: Color::srgba_u8(rng(), rng(), rng(), rng()),
                         custom_size: Some(Vec2::new(50.0, 50.0)),
                         ..Default::default()
                     },
-                    transform: Transform::from_translation(pos),
-                    ..Default::default()
-                });
+                    Transform::from_translation(pos),
+                ));
             }
             UiMessage::Scale(new_scale) => {
                 data.scale = *new_scale;
@@ -140,7 +139,7 @@ fn ui_system(
 
     let row = Row::new()
         .spacing(10)
-        .align_items(Alignment::Center)
+        .align_y(Alignment::Center)
         .push(Button::new(text("Request box")).on_press(UiMessage::BoxRequested))
         .push(text(format!(
             "{} boxes (amplitude: {})",
@@ -149,7 +148,7 @@ fn ui_system(
         )));
     let edit = text_input("", &data.text).on_input(UiMessage::Text);
     let column = Column::new()
-        .align_items(Alignment::Center)
+        .align_x(Alignment::Center)
         .spacing(10)
         .push(edit)
         .push(slider(0.0..=100.0, data.scale, UiMessage::Scale))

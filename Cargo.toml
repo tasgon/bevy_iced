@@ -10,24 +10,22 @@ homepage = "https://github.com/tasgon/bevy_iced"
 repository = "https://github.com/tasgon/bevy_iced"
 documentation = "https://docs.rs/bevy_iced"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-bevy_app = "0.13"
-bevy_derive = "0.13"
-bevy_ecs = "0.13"
-bevy_input = "0.13"
-bevy_math = "0.13"
-bevy_render = "0.13"
-bevy_utils = "0.13"
-bevy_window = "0.13"
+bevy_app = "0.15"
+bevy_derive = "0.15"
+bevy_ecs = "0.15"
+bevy_input = "0.15"
+bevy_math = "0.15"
+bevy_render = "0.15"
+bevy_utils = "0.15"
+bevy_window = "0.15"
 
-iced_core = "0.12"
-iced_runtime = "0.12"
-iced_wgpu = "0.12"
-iced_widget = "0.12"
-iced_renderer = { version = "0.12", features = ["wgpu"] }
+iced_core = { git = "https://github.com/Azorlogh/iced", rev = "47af5890d8cf80b8bfd5909eee1ef3b1d5c05421" }
+iced_runtime = { git = "https://github.com/Azorlogh/iced", rev = "47af5890d8cf80b8bfd5909eee1ef3b1d5c05421" }
+iced_wgpu = { git = "https://github.com/Azorlogh/iced", rev = "47af5890d8cf80b8bfd5909eee1ef3b1d5c05421" }
+iced_widget = { git = "https://github.com/Azorlogh/iced", rev = "47af5890d8cf80b8bfd5909eee1ef3b1d5c05421" }
+iced_renderer = { git = "https://github.com/Azorlogh/iced", features = ["wgpu"], rev = "47af5890d8cf80b8bfd5909eee1ef3b1d5c05421" }
 
 [dev-dependencies]
-bevy = "0.13"
+bevy = "0.15"
 rand = "0.8"

@@ -30,7 +30,6 @@
 
 use std::any::{Any, TypeId};
 
-use std::borrow::Cow;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -39,18 +38,21 @@ use crate::render::{extract_iced_data, IcedNode, ViewportResource};
 use bevy_app::{App, Plugin, Update};
 use bevy_derive::{Deref, DerefMut};
 use bevy_ecs::prelude::{EventWriter, Query, With};
+use bevy_ecs::schedule::IntoSystemConfigs;
 use bevy_ecs::system::{NonSendMut, Res, ResMut, Resource, SystemParam};
 use bevy_input::touch::Touches;
 use bevy_render::render_graph::RenderGraph;
-use bevy_render::renderer::{RenderDevice, RenderQueue};
-use bevy_render::{ExtractSchedule, RenderApp};
+use bevy_render::renderer::{render_system, RenderAdapter, RenderDevice, RenderQueue};
+use bevy_render::{ExtractSchedule, Render, RenderApp, RenderSet};
 use bevy_utils::HashMap;
 use bevy_window::{PrimaryWindow, Window};
 use iced_core::mouse::Cursor;
+use iced_core::Theme;
 use iced_runtime::user_interface::UserInterface;
-use iced_widget::graphics::backend::Text;
+use iced_wgpu::Engine;
+// use iced_widget::graphics::backend::Text;
 use iced_widget::graphics::Viewport;
-use iced_widget::style::Theme;
+// use iced_widget::style::Theme;
 
 /// Basic re-exports for all Iced-related stuff.
 ///
@@ -63,6 +65,7 @@ mod render;
 mod systems;
 mod utils;
 
+use render::TEXTURE_FMT;
 use systems::IcedEventQueue;
 
 /// The default renderer.
@@ -99,12 +102,19 @@ impl Plugin for IcedPlugin {
         render_app
             .insert_resource(default_viewport)
             .insert_resource(iced_resource)
-            .add_systems(ExtractSchedule, extract_iced_data);
-        setup_pipeline(&mut render_app.world.get_resource_mut().unwrap());
+            .add_systems(ExtractSchedule, extract_iced_data)
+            .add_systems(
+                Render,
+                render::recall_staging_belt
+                    .after(render_system)
+                    .in_set(RenderSet::Render),
+            );
+        setup_pipeline(&mut render_app.world_mut().get_resource_mut().unwrap());
     }
 }
 
 struct IcedProps {
+    pub engine: Engine,
     renderer: Renderer,
     debug: iced_runtime::Debug,
     clipboard: iced_core::clipboard::Null,
@@ -112,24 +122,31 @@ struct IcedProps {
 
 impl IcedProps {
     fn new(app: &App, config: &IcedPlugin) -> Self {
-        let render_world = &app.sub_app(RenderApp).world;
+        let render_world = &app.sub_app(RenderApp).world();
         let device = render_world
             .get_resource::<RenderDevice>()
             .unwrap()
             .wgpu_device();
         let queue = render_world.get_resource::<RenderQueue>().unwrap();
-        let mut backend =
-            iced_wgpu::Backend::new(device, queue.as_ref(), config.settings, render::TEXTURE_FMT);
-        for font in &config.fonts {
-            backend.load_font(Cow::Borrowed(*font));
-        }
+
+        let adapter = render_world.get_resource::<RenderAdapter>().unwrap();
+
+        let engine = iced_wgpu::Engine::new(
+            &adapter,
+            device,
+            queue,
+            TEXTURE_FMT,
+            Some(iced_wgpu::graphics::Antialiasing::MSAAx4),
+        );
 
         Self {
-            renderer: Renderer::Wgpu(iced_wgpu::Renderer::new(
-                backend,
+            renderer: iced_wgpu::Renderer::new(
+                device,
+                &engine,
                 config.settings.default_font,
                 config.settings.default_text_size,
-            )),
+            ),
+            engine,
             debug: iced_runtime::Debug::new(),
             clipboard: iced_core::clipboard::Null,
         }
@@ -152,7 +169,7 @@ impl From<IcedProps> for IcedResource {
 }
 
 fn setup_pipeline(graph: &mut RenderGraph) {
-    graph.add_node(render::IcedPass, IcedNode::new());
+    graph.add_node(render::IcedPass, IcedNode);
 
     graph.add_node_edge(bevy_render::graph::CameraDriverLabel, render::IcedPass);
 }
@@ -179,7 +196,7 @@ pub struct IcedSettings {
     /// Setting this to `None` defaults to using the `Window`s scale factor.
     pub scale_factor: Option<f64>,
     /// The theme to use for rendering Iced elements.
-    pub theme: iced_widget::style::Theme,
+    pub theme: Theme,
     /// The style to use for rendering Iced elements.
     pub style: iced::Style,
 }
@@ -195,7 +212,7 @@ impl Default for IcedSettings {
     fn default() -> Self {
         Self {
             scale_factor: None,
-            theme: iced_widget::style::Theme::Dark,
+            theme: Theme::Dark,
             style: iced::Style {
                 text_color: iced_core::Color::WHITE,
             },

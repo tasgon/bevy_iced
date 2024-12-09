@@ -14,19 +14,14 @@ use bevy_render::{
 };
 use bevy_window::Window;
 use iced_core::Size;
-use iced_wgpu::wgpu::util::StagingBelt;
 use iced_wgpu::wgpu::TextureFormat;
 use iced_widget::graphics::Viewport;
-use std::sync::Mutex;
 
 use crate::{DidDraw, IcedProps, IcedResource, IcedSettings};
 
 #[derive(Clone, Hash, Debug, Eq, PartialEq, RenderLabel)]
 pub struct IcedPass;
 
-#[cfg(target_arch = "wasm32")]
-pub const TEXTURE_FMT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
-#[cfg(not(target_arch = "wasm32"))]
 pub const TEXTURE_FMT: TextureFormat = TextureFormat::Bgra8UnormSrgb;
 
 #[derive(Resource, Deref, DerefMut, Clone)]
@@ -63,23 +58,13 @@ pub fn extract_iced_data(
     ));
 }
 
-pub struct IcedNode {
-    staging_belt: Mutex<StagingBelt>,
+pub fn recall_staging_belt(iced: Res<IcedResource>) {
+    iced.lock().unwrap().engine.end_frame();
 }
 
-impl IcedNode {
-    pub fn new() -> Self {
-        Self {
-            staging_belt: Mutex::new(StagingBelt::new(5 * 1024)),
-        }
-    }
-}
+pub struct IcedNode;
 
 impl Node for IcedNode {
-    fn update(&mut self, _world: &mut World) {
-        self.staging_belt.lock().unwrap().recall();
-    }
-
     fn run(
         &self,
         _graph: &mut RenderGraphContext,
@@ -97,11 +82,11 @@ impl Node for IcedNode {
         };
 
         let IcedProps {
-            renderer, debug, ..
+            renderer,
+            debug,
+            engine,
+            ..
         } = &mut *world.resource::<IcedResource>().lock().unwrap();
-        let crate::Renderer::Wgpu(renderer) = renderer else {
-            return Ok(());
-        };
         let render_device = world.resource::<RenderDevice>().wgpu_device();
         let render_queue = world.resource::<RenderQueue>();
         let viewport = world.resource::<ViewportResource>();
@@ -109,24 +94,20 @@ impl Node for IcedNode {
         if !world.get_resource::<DidDrawBasic>().is_some_and(|x| x.0) {
             return Ok(());
         }
-        let view = extracted_window.swap_chain_texture_view.as_ref().unwrap();
-        let staging_belt = &mut *self.staging_belt.lock().unwrap();
-
-        renderer.with_primitives(|backend, primitives| {
-            backend.present(
+        if let Some(view) = &extracted_window.swap_chain_texture_view {
+            renderer.present(
+                engine,
                 render_device,
                 render_queue,
                 render_context.command_encoder(),
                 None,
                 TEXTURE_FMT,
                 view,
-                primitives,
                 viewport,
                 &debug.overlay(),
             );
-        });
-
-        staging_belt.finish();
+        }
+        engine.finish();
 
         Ok(())
     }

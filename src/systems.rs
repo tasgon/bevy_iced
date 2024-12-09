@@ -11,8 +11,7 @@ use bevy_input::{
     mouse::{MouseButtonInput, MouseWheel},
     ButtonInput, ButtonState,
 };
-use bevy_window::{CursorEntered, CursorLeft, CursorMoved, ReceivedCharacter};
-use iced_core::SmolStr;
+use bevy_window::{CursorEntered, CursorLeft, CursorMoved};
 use iced_core::{keyboard, mouse, Event as IcedEvent, Point};
 
 #[derive(Resource, Deref, DerefMut, Default)]
@@ -25,7 +24,6 @@ pub struct InputEvents<'w, 's> {
     cursor: EventReader<'w, 's, CursorMoved>,
     mouse_button: EventReader<'w, 's, MouseButtonInput>,
     mouse_wheel: EventReader<'w, 's, MouseWheel>,
-    received_character: EventReader<'w, 's, ReceivedCharacter>,
     keyboard_input: EventReader<'w, 's, KeyboardInput>,
     touch_input: EventReader<'w, 's, TouchInput>,
 }
@@ -84,20 +82,6 @@ pub fn process_input(
 
     let modifiers = compute_modifiers(&input_map);
 
-    for ev in events.received_character.read() {
-        for char in ev.char.chars() {
-            let smol_str = SmolStr::new(char.to_string());
-            let event = keyboard::Event::KeyPressed {
-                key: keyboard::Key::Character(smol_str.clone()),
-                modifiers,
-                // NOTE: This is a winit thing we don't get from bevy events
-                location: keyboard::Location::Standard,
-                text: Some(smol_str),
-            };
-            event_queue.push(IcedEvent::Keyboard(event));
-        }
-    }
-
     for ev in events.keyboard_input.read() {
         use keyboard::Event::*;
         let event = match ev.key_code {
@@ -110,18 +94,24 @@ pub fn process_input(
             | KeyCode::SuperLeft
             | KeyCode::SuperRight => ModifiersChanged(modifiers),
             _ => {
-                let key = conversions::key_code(&ev.logical_key);
+                let key = conversions::key(&ev.logical_key);
+                let physical_key = conversions::key_code(ev.key_code);
                 if ev.state.is_pressed() {
                     KeyPressed {
-                        key,
+                        // NOTE: This is supposed to be the "unmodified" key, but we don't get it from bevy events
+                        key: key.clone(),
+                        text: conversions::key_text(&key),
+                        physical_key,
+                        modified_key: key,
                         modifiers,
                         // NOTE: This is a winit thing we don't get from bevy events
                         location: keyboard::Location::Standard,
-                        text: None,
                     }
                 } else {
                     KeyReleased {
-                        key,
+                        key: key.clone(),
+                        modified_key: key,
+                        physical_key,
                         modifiers,
                         // NOTE: This is a winit thing we don't get from bevy events
                         location: keyboard::Location::Standard,
