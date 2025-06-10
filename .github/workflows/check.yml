@@ -2,11 +2,20 @@ name: check
 on: [push, pull_request]
 
 jobs:
-  test:
-    name: cargo test
+  clippy-stable:
+    name: clippy stable
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo clippy -- -D warnings
-      - run: cargo clippy --all-features -- -D warnings
+      - run: cargo clippy --all-features --all-targets -- -D warnings
+  clippy-nightly-wasm32-unknown-unknown:
+    name: clippy nightly wasm32-unknown-unknown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy,rust-src
+      - run: cargo clippy --target wasm32-unknown-unknown --all-features --all-targets -- -D warnings

@@ -1,7 +1,9 @@
+use bevy_input::prelude::*;
+use bevy_math::prelude::*;
+use bevy_window::prelude::*;
+
 use crate::iced;
-use crate::IcedContext;
-use bevy_math::Vec2;
-use bevy_window::Window;
+use crate::systems::IcedEventQueue;
 
 pub fn process_cursor_position(
     position: Vec2,
@@ -15,23 +17,18 @@ pub fn process_cursor_position(
 }
 
 /// To correctly process input as last resort events are used
-pub fn process_touch_input<M: bevy_ecs::event::Event>(
-    context: &IcedContext<M>,
-) -> Option<iced::Point> {
-    context
-        .touches
+pub fn process_touch_input(touches: &Touches, events: &IcedEventQueue) -> Option<iced::Point> {
+    touches
         .first_pressed_position()
         .or_else(|| {
-            context
-                .touches
+            touches
                 .iter_just_released()
                 .map(bevy_input::touch::Touch::position)
                 .next()
         })
         .map(|Vec2 { x, y }| iced::Point { x, y })
         .or_else(|| {
-            context
-                .events
+            events
                 .iter()
                 .find_map(|ev| {
                     if let iced::Event::Touch(

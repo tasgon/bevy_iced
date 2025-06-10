@@ -1,0 +1,9 @@
+[unstable]
+build-std = ["std", "panic_abort"]
+
+[target.wasm32-unknown-unknown]
+runner = "wasm-server-runner"
+rustflags = [
+    "-C", "target-feature=+atomics",
+    "--cfg", 'getrandom_backend="wasm_js"'
+]

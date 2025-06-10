@@ -1,7 +1,7 @@
 [package]
 name = "bevy_iced"
 version = "0.5.0"
-edition = "2021"
+edition = "2024"
 description = "Iced integration for Bevy"
 authors = ["tasgon <me@tas.sh>"]
 license = "MIT OR Apache-2.0"
@@ -10,24 +10,51 @@ homepage = "https://github.com/tasgon/bevy_iced"
 repository = "https://github.com/tasgon/bevy_iced"
 documentation = "https://docs.rs/bevy_iced"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["smol"]
+tokio = ["dep:tokio", "dep:async-compat"]
+smol = ["dep:async-io"]
 
 [dependencies]
-bevy_app = "0.13"
-bevy_derive = "0.13"
-bevy_ecs = "0.13"
-bevy_input = "0.13"
-bevy_math = "0.13"
-bevy_render = "0.13"
-bevy_utils = "0.13"
-bevy_window = "0.13"
+bevy_app = "0.16.0-rc.3"
+bevy_derive = "0.16.0-rc.3"
+bevy_ecs = "0.16.0-rc.3"
+bevy_input = "0.16.0-rc.3"
+bevy_math = "0.16.0-rc.3"
+bevy_render = "0.16.0-rc.3"
+bevy_core_pipeline = "0.16.0-rc.3"
+bevy_tasks = "0.16.0-rc.3"
+bevy_window = "0.16.0-rc.3"
+bevy_winit = "0.16.0-rc.3"
 
-iced_core = "0.12"
-iced_runtime = "0.12"
-iced_wgpu = "0.12"
-iced_widget = "0.12"
-iced_renderer = { version = "0.12", features = ["wgpu"] }
+iced_core = { git = "https://github.com/Argeo-Robotics/iced.git", rev = "943d6b1a93eb73ca69365e5009bb91b281785992" }
+iced_graphics = { git = "https://github.com/Argeo-Robotics/iced.git", rev = "943d6b1a93eb73ca69365e5009bb91b281785992" }
+iced_renderer = { git = "https://github.com/Argeo-Robotics/iced.git", features = ["wgpu"], rev = "943d6b1a93eb73ca69365e5009bb91b281785992" }
+iced_runtime = { git = "https://github.com/Argeo-Robotics/iced.git", rev = "943d6b1a93eb73ca69365e5009bb91b281785992" }
+iced_wgpu = { git = "https://github.com/Argeo-Robotics/iced.git", rev = "943d6b1a93eb73ca69365e5009bb91b281785992" }
+iced_widget = { git = "https://github.com/Argeo-Robotics/iced.git", rev = "943d6b1a93eb73ca69365e5009bb91b281785992" }
+
+cfg-if = "1.0.0"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1.44.1", default-features = false, features = ["time"], optional = true }
+async-compat = { version = "0.2.4", optional = true }
+async-io = { version = "2.4.0", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+gloo-timers = { version = "0.3.0", features = ["futures"] }
+
 
 [dev-dependencies]
-bevy = "0.13"
-rand = "0.8"
+bevy = { version = "0.16.0-rc.1", default-features = false, features = [
+    "async_executor",
+    "bevy_core_pipeline",
+    "bevy_sprite",
+    "bevy_window",
+    "bevy_winit",
+    "multi_threaded",
+    "webgpu",
+    "x11"
+] }
+getrandom = { version = "0.3.1", features = ["wasm_js"] }
+rand = "0.9"

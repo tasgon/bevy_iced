@@ -3,13 +3,18 @@ use bevy::{
     input::mouse::{MouseButtonInput, MouseWheel},
     prelude::*,
 };
-use bevy_iced::iced::{
-    self,
-    widget::{slider, text, text_input, Button, Column, Row},
-    Alignment, Style,
-};
 use bevy_iced::{IcedContext, IcedPlugin, IcedSettings};
+use bevy_iced::{
+    IcedProgramSet,
+    iced::{
+        self, Alignment, Style,
+        widget::{Button, Column, Row, slider, text, text_input},
+    },
+};
 use rand::random as rng;
+
+const NOTOSANS_REGULAR: iced::Font = iced::Font::with_name("Noto Sans");
+const NOTOSANS_REGULAR_BYTES: &[u8] = include_bytes!("../assets/fonts/NotoSans-Regular.ttf");
 
 #[derive(Clone, Event)]
 enum UiMessage {
@@ -37,8 +42,13 @@ pub fn main() {
             ..Default::default()
         }))
         .add_plugins((
-            IcedPlugin::default(),
-            FrameTimeDiagnosticsPlugin,
+            IcedPlugin::<UiMessage>::default()
+                .fonts(vec![NOTOSANS_REGULAR_BYTES])
+                .settings(iced::Settings {
+                    default_font: NOTOSANS_REGULAR,
+                    ..Default::default()
+                }),
+            FrameTimeDiagnosticsPlugin::default(),
             LogDiagnosticsPlugin::default(),
         ))
         .add_event::<UiMessage>()
@@ -53,23 +63,30 @@ pub fn main() {
             style: Style {
                 text_color: iced::Color::from_rgb(0.0, 1.0, 1.0),
             },
+            ..Default::default()
         })
         .add_systems(Startup, build_program)
         .add_systems(
             Update,
-            (tick, box_system, update_scale_factor, toggle_ui, ui_system),
+            (
+                tick,
+                box_system.in_set(IcedProgramSet::Update),
+                update_scale_factor,
+                toggle_ui,
+                ui_system.in_set(IcedProgramSet::View),
+            ),
         )
         .run();
 }
 
 fn build_program(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
 }
 
 fn tick(mut sprites: Query<&mut Sprite>, time: Res<Time>, data: Res<UiData>) {
     let scale = data.scale;
     for mut s in sprites.iter_mut() {
-        s.custom_size = Some(Vec2::new(scale, scale) * time.elapsed_seconds().sin().abs());
+        s.custom_size = Some(Vec2::new(scale, scale) * time.elapsed_secs().sin().abs());
     }
 }
 
@@ -83,15 +100,14 @@ fn box_system(
     for msg in messages.read() {
         match msg {
             UiMessage::BoxRequested => {
-                commands.spawn(SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::rgba_u8(rng(), rng(), rng(), rng()),
+                commands.spawn((
+                    Sprite {
+                        color: Color::srgba_u8(rng(), rng(), rng(), rng()),
                         custom_size: Some(Vec2::new(50.0, 50.0)),
                         ..Default::default()
                     },
-                    transform: Transform::from_translation(pos),
-                    ..Default::default()
-                });
+                    Transform::from_translation(pos),
+                ));
             }
             UiMessage::Scale(new_scale) => {
                 data.scale = *new_scale;
@@ -99,7 +115,7 @@ fn box_system(
             UiMessage::Text(s) => {
                 data.text.clone_from(s);
                 for mut i in &mut sprites.iter_mut() {
-                    i.color = Color::rgba_u8(rng(), rng(), rng(), rng());
+                    i.color = Color::srgba_u8(rng(), rng(), rng(), rng());
                 }
             }
         }
@@ -140,7 +156,7 @@ fn ui_system(
 
     let row = Row::new()
         .spacing(10)
-        .align_items(Alignment::Center)
+        .align_y(Alignment::Center)
         .push(Button::new(text("Request box")).on_press(UiMessage::BoxRequested))
         .push(text(format!(
             "{} boxes (amplitude: {})",
@@ -149,7 +165,7 @@ fn ui_system(
         )));
     let edit = text_input("", &data.text).on_input(UiMessage::Text);
     let column = Column::new()
-        .align_items(Alignment::Center)
+        .align_x(Alignment::Center)
         .spacing(10)
         .push(edit)
         .push(slider(0.0..=100.0, data.scale, UiMessage::Scale))
